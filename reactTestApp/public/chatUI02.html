@@ -220,6 +220,34 @@
         border-radius: 4px;
         margin-top: 8px;
         }
+
+        .view-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.view-btn:hover {
+  background: #059669;
+}
+
+/* View mode helpers */
+.hidden {
+  display: none !important;
+}
+
+.full {
+  width: 66.666% !important;
+}
+
+        .hidden {
+  display: none !important;
+}
+
   </style>
 </head>
 <body>
@@ -254,10 +282,23 @@
 
     <div class="panel html-panel">
       <div class="panel-header">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
         </svg>
-        HTML Input
+        HTML Input -->
+          <span style="flex: 1; display: flex; align-items: center; gap: 8px;">
+    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+    </svg>
+    View Mode
+  </span>
+
+  <div style="display: flex; gap: 6px;">
+    <button id="btnSplit" class="view-btn">Split</button>
+    <button id="btnHtml" class="view-btn">HTML</button>
+    <button id="btnPreview" class="view-btn">Preview</button>
+  </div>
       </div>
       <textarea id="htmlEditor" class="html-editor"><!DOCTYPE html>
 <html lang="en">
@@ -313,6 +354,58 @@ var imageButton = document.getElementById('imageButton');
 var imageInput = document.getElementById('imageInput');
 var htmlEditor = document.getElementById('htmlEditor');
 var previewFrame = document.getElementById('previewFrame');
+
+var toggleButton = document.getElementById('toggleView');
+var htmlPanel = document.querySelector('.html-panel');
+var previewPanel = document.querySelector('.preview-panel');
+
+var showingPreview = false;
+
+toggleButton.addEventListener('click', function () {
+  showingPreview = !showingPreview;
+
+  if (showingPreview) {
+    htmlPanel.classList.add('hidden');
+    previewPanel.classList.remove('hidden');
+    toggleButton.textContent = 'Show HTML';
+  } else {
+    previewPanel.classList.add('hidden');
+    htmlPanel.classList.remove('hidden');
+    toggleButton.textContent = 'Show Preview';
+  }
+});
+
+var chatPanel = document.querySelector('.chat-panel');
+var htmlPanel = document.querySelector('.html-panel');
+var previewPanel = document.querySelector('.preview-panel');
+
+var btnSplit = document.getElementById('btnSplit');
+var btnHtml = document.getElementById('btnHtml');
+var btnPreview = document.getElementById('btnPreview');
+
+function resetLayout() {
+  htmlPanel.classList.remove('hidden', 'full');
+  previewPanel.classList.remove('hidden', 'full');
+}
+
+btnSplit.addEventListener('click', function () {
+  resetLayout();
+});
+
+btnHtml.addEventListener('click', function () {
+  resetLayout();
+  previewPanel.classList.add('hidden');
+  htmlPanel.classList.add('full');
+});
+
+btnPreview.addEventListener('click', function () {
+  resetLayout();
+  htmlPanel.classList.add('hidden');
+  previewPanel.classList.add('full');
+});
+
+
+
 var isLoading = false;
 var selectedImage = null;
 
