@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat-to-HTML UI</title>
+  <style>
+    html,body { height:100%; margin:0; font-family: Arial, Helvetica, sans-serif; }
+    .app { display:flex; height:100vh; gap:12px; padding:12px; box-sizing:border-box; }
+    .panel { flex:1; background:#fff; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); display:flex; flex-direction:column; overflow:hidden; }
+    .panel-header { padding:12px 14px; border-bottom:1px solid #eee; font-weight:600; background:#fafafa; }
+    .panel-body { padding:12px; overflow:auto; flex:1; }
+    .panel-footer { padding:10px; border-top:1px solid #eee; background:#fafafa; }
+
+    /* Chat list */
+    .messages { display:flex; flex-direction:column; gap:8px; }
+    .msg { padding:10px 12px; border-radius:10px; max-width:85%; }
+    .msg.user { align-self:flex-end; background:#e6f0ff; color:#044; }
+    .msg.assistant { align-self:flex-start; background:#f1f1f1; color:#111; }
+
+    /* Input area */
+    textarea { width:100%; min-height:160px; font-family:monospace; font-size:13px; padding:10px; box-sizing:border-box; border-radius:6px; border:1px solid #ddd; }
+    .controls { display:flex; gap:8px; align-items:center; }
+    button { padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    button.primary { background:#0066ff; color:#fff; border-color:#0066ff; }
+
+    /* Preview */
+    .preview-frame { border:1px solid #ddd; border-radius:6px; height:100%; overflow:auto; background:#fff; }
+    .preview-top { padding:8px 10px; border-bottom:1px solid #eee; background:#fafafa; }
+    .preview-body { padding:12px; }
+
+    @media (max-width:900px) { .app { flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React + Babel (in-browser JSX transform for quick demo) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    function ChatUI(){
+      const [messages, setMessages] = useState([
+        {role:'assistant', text:'Welcome — send a prompt to shape the UI and/or load an HTML file in the middle panel.'}
+      ]);
+
+      const [inputHtml, setInputHtml] = useState('<div>Type or load HTML here</div>');
+      const [previewHtml, setPreviewHtml] = useState(inputHtml);
+      const fileInputRef = useRef(null);
+      const htmlTextareaRef = useRef(null);
+
+      // When inputHtml updates, keep preview in sync (user can also "apply prompt")
+      useEffect(()=>{
+        setPreviewHtml(inputHtml);
+      }, [inputHtml]);
+
+      function sendPrompt(text){
+        if(!text) return;
+        setMessages(m => [...m, {role:'user', text}]);
+
+        // Simple demo assistant response: echo + suggestion
+        const response = `Got prompt: "${text}" — you can edit the middle HTML or press Apply Prompt to merge changes into the preview.`;
+        setTimeout(()=> setMessages(m => [...m, {role:'assistant', text:response}]), 300);
+      }
+
+      function handleSendClick(){
+        const txt = document.getElementById('chatInput').value.trim();
+        if(!txt) return;
+        document.getElementById('chatInput').value = '';
+        sendPrompt(txt);
+      }
+
+      function handleFilePick(e){
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          setInputHtml(String(ev.target.result));
+          // append a chat message about the upload
+          setMessages(m => [...m, {role:'assistant', text:`Loaded HTML file: ${file.name}`}]);
+        };
+        reader.readAsText(file);
+      }
+
+      function applyPromptToHtml(){
+        // For demo: prepend a comment containing last user prompt (if any)
+        const lastUser = [...messages].reverse().find(m=>m.role==='user');
+        const note = lastUser ? `<!-- Prompt: ${lastUser.text} -->\n` : '<!-- Prompt: (none) -->\n';
+        setPreviewHtml(note + inputHtml);
+      }
+
+      return (
+        <div className="app">
+          <div className="panel">
+            <div className="panel-header">Chat</div>
+            <div className="panel-body">
+              <div className="messages">
+                {messages.map((m, i)=>(
+                  <div key={i} className={"msg "+(m.role==='user'? 'user':'assistant')}>{m.text}</div>
+                ))}
+              </div>
+            </div>
+            <div className="panel-footer">
+              <div style={{display:'flex',gap:8}}>
+                <input id="chatFile" type="file" accept=".txt,.md" style={{display:'none'}} />
+                <input id="chatInput" placeholder="Type a prompt and press Send" style={{flex:1,padding:8,borderRadius:6,border:'1px solid #ddd'}} />
+                <button onClick={handleSendClick} className="primary">Send</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header">Input HTML</div>
+            <div className="panel-body">
+              <div style={{display:'flex',gap:8,marginBottom:8}}>
+                <input type="file" accept="text/html,.html" onChange={handleFilePick} />
+                <button onClick={()=>{ setInputHtml('<div>New empty container</div>'); }}>Reset</button>
+                <button onClick={()=>{ setInputHtml(document.getElementById('htmlEditor').value); }}>Sync from Editor</button>
+              </div>
+              <textarea id="htmlEditor" ref={htmlTextareaRef} value={inputHtml} onChange={(e)=>setInputHtml(e.target.value)} />
+            </div>
+            <div className="panel-footer">
+              <div className="controls">
+                <button onClick={applyPromptToHtml}>Apply Prompt</button>
+                <button onClick={()=>setPreviewHtml(inputHtml)}>Preview Input</button>
+                <button onClick={()=>{ navigator.clipboard && navigator.clipboard.writeText(inputHtml); }}>Copy HTML</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header">Output Preview</div>
+            <div className="panel-body">
+              <div className="preview-top">Rendered output (based on input + prompt)</div>
+              <div className="preview-body">
+                <div className="preview-frame" id="previewFrame" dangerouslySetInnerHTML={{__html: previewHtml}} />
+              </div>
+            </div>
+            <div className="panel-footer">
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>{
+                  const blob = new Blob([previewHtml], {type:'text/html'});
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'preview.html';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}>Download HTML</button>
+                <button onClick={()=>{
+                  // simple reset
+                  setPreviewHtml('');
+                }}>Clear Preview</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<ChatUI />);
+  </script>
+</body>
+</html>
