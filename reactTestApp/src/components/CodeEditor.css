@@ -1,0 +1,48 @@
+.code-editor-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background-color: #1e1e1e;
+    /* Dark theme for editor */
+    color: #d4d4d4;
+    border-left: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+}
+
+.editor-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: #252526;
+    border-bottom: 1px solid #3e3e42;
+    color: #cccccc;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.editor-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.code-textarea {
+    width: 100%;
+    height: 100%;
+    background-color: #1e1e1e;
+    color: #9cdcfe;
+    /* Light blueish text */
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 1rem;
+    resize: none;
+    border: none;
+    outline: none;
+}
+
+.code-textarea::placeholder {
+    color: #606060;
+}

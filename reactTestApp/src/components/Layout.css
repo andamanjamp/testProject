@@ -1,0 +1,85 @@
+.layout-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background-color: var(--bg-primary);
+    overflow: hidden;
+}
+
+/* Sidebar reuse */
+.sidebar {
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    width: 240px;
+    flex-shrink: 0;
+}
+
+.sidebar.closed {
+    width: 60px;
+}
+
+.sidebar-header {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-text {
+    font-family: var(--font-serif);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Panels */
+.pane {
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3-Column Split */
+.chat-pane {
+    flex: 1;
+    /* Flexible width */
+    min-width: 320px;
+    max-width: 35%;
+    /* Don't get too wide */
+    border-right: 1px solid var(--border-light);
+}
+
+.editor-pane {
+    width: 33%;
+    /* Fixed proportionate width */
+    min-width: 300px;
+}
+
+.preview-pane-wrapper {
+    flex: 1;
+    /* Remaining space */
+    min-width: 300px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .chat-pane {
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .layout-container {
+        overflow-x: auto;
+        /* Scroll horizontally on small screens */
+        /* Or stack them, but 3 panes on mobile is hard. Let's make them min-width so they scroll */
+    }
+
+    .pane {
+        min-width: 100vw;
+        /* Stack on mobile really */
+    }
+}
