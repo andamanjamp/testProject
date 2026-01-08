@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,21 +49,60 @@
       background: linear-gradient(to right, #2563eb, #1d4ed8);
     }
 
+    /* Combined Output Section */
+    .output-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 66.666%;
+    }
+
+    .output-header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to right, #1f2937, #374151);
+    }
+
+    .output-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .output-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
     .html-panel {
       background: #f9fafb;
       border-right: 1px solid #e5e7eb;
-    }
-
-    .html-panel .panel-header {
-      background: #1f2937;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     .preview-panel {
       background: white;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
-    .preview-panel .panel-header {
-      background: linear-gradient(to right, #16a34a, #15803d);
+    /* View toggle button group */
+    .view-toggle-group {
+      display: flex;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 4px;
     }
 
     .chat-messages {
@@ -124,9 +164,13 @@
     }
 
     @keyframes bounce {
-      0%, 80%, 100% {
+
+      0%,
+      80%,
+      100% {
         transform: scale(0);
       }
+
       40% {
         transform: scale(1);
       }
@@ -198,109 +242,158 @@
     }
 
     .image-button {
-        padding: 8px;
-        background: #10b981;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-        }
+      padding: 8px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
 
-        .image-button:hover {
-        background: #059669;
-        }
+    .image-button:hover {
+      background: #059669;
+    }
 
-        .image-preview {
-        max-width: 200px;
-        max-height: 200px;
-        border-radius: 4px;
-        margin-top: 8px;
-        }
+    .image-preview {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
 
-        .view-btn {
-  background: #10b981;
-  color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
+    .view-btn {
+      background: transparent;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
 
-.view-btn:hover {
-  background: #059669;
-}
+    .view-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
 
-/* View mode helpers */
-.hidden {
-  display: none !important;
-}
+    .view-btn.active {
+      background: #10b981;
+      color: white;
+    }
 
-.full {
-  width: 66.666% !important;
-}
+    /* View mode helpers */
+    .hidden {
+      display: none !important;
+    }
 
-        .hidden {
-  display: none !important;
-}
+    .full {
+      width: 66.666% !important;
+    }
 
+    /* Panel transitions - horizontal slide */
+    .html-panel,
+    .preview-panel {
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      opacity: 1;
+      transform: translateX(0);
+      overflow: hidden;
+    }
+
+    .html-panel.hidden {
+      opacity: 0;
+      transform: translateX(-100%);
+      width: 0 !important;
+      flex: 0 !important;
+      padding: 0 !important;
+    }
+
+    .preview-panel.hidden {
+      opacity: 0;
+      transform: translateX(100%);
+      width: 0 !important;
+      flex: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* Language toggle button */
+    .lang-toggle {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+      margin-left: auto;
+    }
+
+    .lang-toggle:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="panel chat-panel">
       <div class="panel-header">
         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+          </path>
         </svg>
-        AI Assistant
+        <span id="assistantTitle">AI Assistant</span>
+        <button id="langToggle" class="lang-toggle">TH</button>
       </div>
-      
+
       <div class="chat-messages" id="chatMessages">
         <div class="message assistant">
           <div class="message-content">
-            Hello! I can help you modify HTML code. Paste your HTML in the middle panel and tell me what changes you'd like to make.
+            Hello! I can help you modify HTML code. Paste your HTML in the middle panel and tell me what changes you'd
+            like to make.
           </div>
         </div>
       </div>
 
-    <div class="chat-input-area">
-    <input type="file" id="imageInput" accept="image/*" style="display: none;">
-    <button id="imageButton" class="image-button" title="Upload image">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-        </svg>
-    </button>
-    <input type="text" id="chatInput" class="chat-input" placeholder="Ask me to modify the HTML...">
-    <button id="sendButton" class="send-button">Send</button>
-    </div>
-    </div>
-
-    <div class="panel html-panel">
-      <div class="panel-header">
-        <!-- <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-        </svg>
-        HTML Input -->
-          <span style="flex: 1; display: flex; align-items: center; gap: 8px;">
-    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-    </svg>
-    View Mode
-  </span>
-
-  <div style="display: flex; gap: 6px;">
-    <button id="btnSplit" class="view-btn">Split</button>
-    <button id="btnHtml" class="view-btn">HTML</button>
-    <button id="btnPreview" class="view-btn">Preview</button>
-  </div>
+      <div class="chat-input-area">
+        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        <button id="imageButton" class="image-button" title="Upload image">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+            </path>
+          </svg>
+        </button>
+        <input type="text" id="chatInput" class="chat-input" placeholder="Ask me to modify the HTML...">
+        <button id="sendButton" class="send-button">Send</button>
       </div>
-      <textarea id="htmlEditor" class="html-editor"><!DOCTYPE html>
+    </div>
+
+    <!-- Combined Output Panel -->
+    <div class="output-section">
+      <div class="output-header">
+        <span class="output-title">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+          </svg>
+          Output
+        </span>
+        <div class="view-toggle-group">
+          <button id="btnSplit" class="view-btn active">Split</button>
+          <button id="btnHtml" class="view-btn">HTML</button>
+          <button id="btnPreview" class="view-btn">Preview</button>
+        </div>
+      </div>
+      <div class="output-content">
+        <div class="panel html-panel" id="htmlPanelContent">
+          <textarea id="htmlEditor" class="html-editor"><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -332,213 +425,258 @@
   </div>
 </body>
 </html></textarea>
-    </div>
-
-    <div class="panel preview-panel">
-      <div class="panel-header">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-        </svg>
-        Preview
+        </div>
+        <div class="panel preview-panel" id="previewPanelContent">
+          <iframe id="previewFrame" class="preview-frame"></iframe>
+        </div>
       </div>
-      <iframe id="previewFrame" class="preview-frame"></iframe>
     </div>
   </div>
 
   <script>
     var chatMessages = document.getElementById('chatMessages');
-var chatInput = document.getElementById('chatInput');
-var sendButton = document.getElementById('sendButton');
-var imageButton = document.getElementById('imageButton');
-var imageInput = document.getElementById('imageInput');
-var htmlEditor = document.getElementById('htmlEditor');
-var previewFrame = document.getElementById('previewFrame');
+    var chatInput = document.getElementById('chatInput');
+    var sendButton = document.getElementById('sendButton');
+    var imageButton = document.getElementById('imageButton');
+    var imageInput = document.getElementById('imageInput');
+    var htmlEditor = document.getElementById('htmlEditor');
+    var previewFrame = document.getElementById('previewFrame');
 
-var toggleButton = document.getElementById('toggleView');
-var htmlPanel = document.querySelector('.html-panel');
-var previewPanel = document.querySelector('.preview-panel');
+    // Get panel elements for the combined output section
+    var htmlPanel = document.getElementById('htmlPanelContent');
+    var previewPanel = document.getElementById('previewPanelContent');
 
-var showingPreview = false;
+    // Toggle buttons
+    var btnSplit = document.getElementById('btnSplit');
+    var btnHtml = document.getElementById('btnHtml');
+    var btnPreview = document.getElementById('btnPreview');
+    var allViewBtns = [btnSplit, btnHtml, btnPreview];
 
-toggleButton.addEventListener('click', function () {
-  showingPreview = !showingPreview;
+    // Set active button state
+    function setActiveButton(activeBtn) {
+      allViewBtns.forEach(function (btn) {
+        btn.classList.remove('active');
+      });
+      activeBtn.classList.add('active');
+    }
 
-  if (showingPreview) {
-    htmlPanel.classList.add('hidden');
-    previewPanel.classList.remove('hidden');
-    toggleButton.textContent = 'Show HTML';
-  } else {
-    previewPanel.classList.add('hidden');
-    htmlPanel.classList.remove('hidden');
-    toggleButton.textContent = 'Show Preview';
-  }
-});
+    // Reset layout - show both panels
+    function resetLayout() {
+      htmlPanel.classList.remove('hidden');
+      previewPanel.classList.remove('hidden');
+    }
 
-var chatPanel = document.querySelector('.chat-panel');
-var htmlPanel = document.querySelector('.html-panel');
-var previewPanel = document.querySelector('.preview-panel');
+    // Split view - show both panels (default)
+    btnSplit.addEventListener('click', function () {
+      resetLayout();
+      setActiveButton(btnSplit);
+    });
 
-var btnSplit = document.getElementById('btnSplit');
-var btnHtml = document.getElementById('btnHtml');
-var btnPreview = document.getElementById('btnPreview');
+    // HTML only view
+    btnHtml.addEventListener('click', function () {
+      resetLayout();
+      previewPanel.classList.add('hidden');
+      setActiveButton(btnHtml);
+    });
 
-function resetLayout() {
-  htmlPanel.classList.remove('hidden', 'full');
-  previewPanel.classList.remove('hidden', 'full');
-}
+    // Preview only view
+    btnPreview.addEventListener('click', function () {
+      resetLayout();
+      htmlPanel.classList.add('hidden');
+      setActiveButton(btnPreview);
+    });
 
-btnSplit.addEventListener('click', function () {
-  resetLayout();
-});
+    // =========================
+    // Language Toggle (TH/EN)
+    // =========================
+    var langToggle = document.getElementById('langToggle');
+    var assistantTitle = document.getElementById('assistantTitle');
+    var currentLang = 'en';
 
-btnHtml.addEventListener('click', function () {
-  resetLayout();
-  previewPanel.classList.add('hidden');
-  htmlPanel.classList.add('full');
-});
-
-btnPreview.addEventListener('click', function () {
-  resetLayout();
-  htmlPanel.classList.add('hidden');
-  previewPanel.classList.add('full');
-});
-
-
-
-var isLoading = false;
-var selectedImage = null;
-
-function updatePreview() {
-  var htmlContent = htmlEditor.value;
-  var blob = new Blob([htmlContent], { type: 'text/html' });
-  var url = URL.createObjectURL(blob);
-  previewFrame.src = url;
-}
-
-htmlEditor.addEventListener('input', updatePreview);
-updatePreview();
-
-function addMessage(role, content, imageData) {
-  var messageDiv = document.createElement('div');
-  messageDiv.className = 'message ' + role;
-  
-  var contentDiv = document.createElement('div');
-  contentDiv.className = 'message-content';
-  contentDiv.textContent = content;
-  
-  if (imageData) {
-    var img = document.createElement('img');
-    img.src = imageData;
-    img.className = 'image-preview';
-    contentDiv.appendChild(img);
-  }
-  
-  messageDiv.appendChild(contentDiv);
-  chatMessages.appendChild(messageDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function showLoading() {
-  var messageDiv = document.createElement('div');
-  messageDiv.className = 'message assistant';
-  messageDiv.id = 'loadingMessage';
-  
-  var contentDiv = document.createElement('div');
-  contentDiv.className = 'message-content';
-  contentDiv.innerHTML = '<div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
-  
-  messageDiv.appendChild(contentDiv);
-  chatMessages.appendChild(messageDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function removeLoading() {
-  var loadingMsg = document.getElementById('loadingMessage');
-  if (loadingMsg) {
-    loadingMsg.remove();
-  }
-}
-
-imageButton.addEventListener('click', function() {
-  imageInput.click();
-});
-
-imageInput.addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  if (file) {
-    var reader = new FileReader();
-    reader.onload = function(event) {
-      selectedImage = event.target.result;
-      chatInput.placeholder = 'Describe what you want based on this image...';
+    var translations = {
+      en: {
+        assistantTitle: 'AI Assistant',
+        langButton: 'TH',
+        outputTitle: 'Output',
+        splitBtn: 'Split',
+        htmlBtn: 'HTML',
+        previewBtn: 'Preview',
+        inputPlaceholder: 'Ask me to modify the HTML...',
+        sendBtn: 'Send',
+        welcomeMsg: "Hello! I can help you modify HTML code. Paste your HTML in the middle panel and tell me what changes you'd like to make.",
+        successMsg: 'I have updated the HTML in the middle panel!',
+        errorMsg: 'Sorry, I encountered an error. Please try again.',
+        imagePrompt: 'Create HTML based on this image'
+      },
+      th: {
+        assistantTitle: 'ผู้ช่วย AI',
+        langButton: 'EN',
+        outputTitle: 'ผลลัพธ์',
+        splitBtn: 'แยกหน้าจอ',
+        htmlBtn: 'HTML',
+        previewBtn: 'ตัวอย่าง',
+        inputPlaceholder: 'ขอให้ฉันแก้ไข HTML...',
+        sendBtn: 'ส่ง',
+        welcomeMsg: 'สวัสดี! ฉันสามารถช่วยคุณแก้ไขโค้ด HTML ได้ วาง HTML ของคุณในแผงตรงกลาง แล้วบอกฉันว่าคุณต้องการเปลี่ยนแปลงอะไร',
+        successMsg: 'ฉันได้อัปเดต HTML ในแผงตรงกลางแล้ว!',
+        errorMsg: 'ขออภัย เกิดข้อผิดพลาด กรุณาลองอีกครั้ง',
+        imagePrompt: 'สร้าง HTML จากรูปภาพนี้'
+      }
     };
-    reader.readAsDataURL(file);
-  }
-});
 
-async function getAIResponse(userMessage, currentHTML, imageData) {
-  const response = await fetch("http://localhost:3001/api/chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: userMessage,
-      html: currentHTML,
-      image: imageData
-    })
-  });
+    function updateLanguage(lang) {
+      var t = translations[lang];
 
-  if (!response.ok) {
-    throw new Error("API error");
-  }
+      // Update UI elements
+      assistantTitle.textContent = t.assistantTitle;
+      langToggle.textContent = t.langButton;
+      document.querySelector('.output-title').lastChild.textContent = ' ' + t.outputTitle;
+      btnSplit.textContent = t.splitBtn;
+      btnHtml.textContent = t.htmlBtn;
+      btnPreview.textContent = t.previewBtn;
+      chatInput.placeholder = t.inputPlaceholder;
+      sendButton.textContent = t.sendBtn;
+    }
 
-  const data = await response.json();
-  return data.html;
-}
+    langToggle.addEventListener('click', function () {
+      currentLang = currentLang === 'en' ? 'th' : 'en';
+      updateLanguage(currentLang);
+    });
 
-function sendMessage() {
-  var message = chatInput.value.trim();
-  if ((!message && !selectedImage) || isLoading) return;
+    var isLoading = false;
+    var selectedImage = null;
 
-  var displayMessage = message || 'Create HTML based on this image';
-  addMessage('user', displayMessage, selectedImage);
-  
-  chatInput.value = '';
-  chatInput.placeholder = 'Ask me to modify the HTML...';
-  
-  isLoading = true;
-  sendButton.disabled = true;
-  showLoading();
+    function updatePreview() {
+      var htmlContent = htmlEditor.value;
+      var blob = new Blob([htmlContent], { type: 'text/html' });
+      var url = URL.createObjectURL(blob);
+      previewFrame.src = url;
+    }
 
-  var currentHTML = htmlEditor.value;
-  var imageToSend = selectedImage;
-  selectedImage = null;
-  imageInput.value = '';
-  
-  getAIResponse(message, currentHTML, imageToSend).then(function(modifiedHTML) {
-    removeLoading();
-    addMessage('assistant', 'I have updated the HTML in the middle panel!');
-    htmlEditor.value = modifiedHTML;
+    htmlEditor.addEventListener('input', updatePreview);
     updatePreview();
-    isLoading = false;
-    sendButton.disabled = false;
-  }).catch(function(error) {
-    removeLoading();
-    addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
-    console.error('Error:', error);
-    isLoading = false;
-    sendButton.disabled = false;
-  });
-}
 
-sendButton.addEventListener('click', sendMessage);
-chatInput.addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+    function addMessage(role, content, imageData) {
+      var messageDiv = document.createElement('div');
+      messageDiv.className = 'message ' + role;
+
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      contentDiv.textContent = content;
+
+      if (imageData) {
+        var img = document.createElement('img');
+        img.src = imageData;
+        img.className = 'image-preview';
+        contentDiv.appendChild(img);
+      }
+
+      messageDiv.appendChild(contentDiv);
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showLoading() {
+      var messageDiv = document.createElement('div');
+      messageDiv.className = 'message assistant';
+      messageDiv.id = 'loadingMessage';
+
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      contentDiv.innerHTML = '<div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+
+      messageDiv.appendChild(contentDiv);
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeLoading() {
+      var loadingMsg = document.getElementById('loadingMessage');
+      if (loadingMsg) {
+        loadingMsg.remove();
+      }
+    }
+
+    imageButton.addEventListener('click', function () {
+      imageInput.click();
+    });
+
+    imageInput.addEventListener('change', function (e) {
+      var file = e.target.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function (event) {
+          selectedImage = event.target.result;
+          chatInput.placeholder = 'Describe what you want based on this image...';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    async function getAIResponse(userMessage, currentHTML, imageData) {
+      const response = await fetch("http://localhost:3001/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          html: currentHTML,
+          image: imageData
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("API error");
+      }
+
+      const data = await response.json();
+      return data.html;
+    }
+
+    function sendMessage() {
+      var message = chatInput.value.trim();
+      if ((!message && !selectedImage) || isLoading) return;
+
+      var displayMessage = message || 'Create HTML based on this image';
+      addMessage('user', displayMessage, selectedImage);
+
+      chatInput.value = '';
+      chatInput.placeholder = 'Ask me to modify the HTML...';
+
+      isLoading = true;
+      sendButton.disabled = true;
+      showLoading();
+
+      var currentHTML = htmlEditor.value;
+      var imageToSend = selectedImage;
+      selectedImage = null;
+      imageInput.value = '';
+
+      getAIResponse(message, currentHTML, imageToSend).then(function (modifiedHTML) {
+        removeLoading();
+        addMessage('assistant', 'I have updated the HTML in the middle panel!');
+        htmlEditor.value = modifiedHTML;
+        updatePreview();
+        isLoading = false;
+        sendButton.disabled = false;
+      }).catch(function (error) {
+        removeLoading();
+        addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+        console.error('Error:', error);
+        isLoading = false;
+        sendButton.disabled = false;
+      });
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
   </script>
 </body>
+
 </html>
