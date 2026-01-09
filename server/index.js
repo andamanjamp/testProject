@@ -107,6 +107,7 @@ app.post("/api/chat", async (req, res) => {
     // Parse the response
     let responseText = msg.content[0].text;
 
+
     // Attempt to extract JSON if Claude wraps it in markdown (though we asked it not to)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
