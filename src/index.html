@@ -112,7 +112,7 @@
                     <span class="tab-icon">🎨</span>
                     <span class="tab-label">CSS</span>
                 </button>
-                <button class="tab" data-lang="javascript">
+                <button class="tab" data-lang="js">
                     <span class="tab-icon">⚡</span>
                     <span class="tab-label">JavaScript</span>
                 </button>
@@ -121,18 +121,21 @@
             <!-- Code Editors -->
             <div class="editor-container">
                 <div class="editor active" id="htmlEditor">
-                    <textarea class="code-textarea" id="htmlCode" placeholder="<!-- Your HTML Body content here... -->"><div class="container">
-    <h1>Welcome to Web Dev Playground</h1>
-    <p>Start coding and see live results!</p>
-</div></textarea>
+                    <textarea class="code-textarea" id="htmlCode" placeholder="<!-- Your HTML Body content here... -->">
+                        <div class="container">
+                            <h1>Welcome to Web Dev Playground</h1>
+                            <p>Start coding and see live results!</p>
+                        </div>
+                    </textarea>
                 </div>
                 <div class="editor" id="cssEditor">
-                    <textarea class="code-textarea" id="cssCode" placeholder="/* Your CSS styles here... */">body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0;
-  padding: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
+                    <textarea class="code-textarea" id="cssCode" placeholder="/* Your CSS styles here... */">
+                        body {
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            margin: 0;
+                            padding: 40px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-height: 100vh;
 }
 
 .container {
@@ -153,7 +156,8 @@ p {
   color: #555;
   font-size: 18px;
   line-height: 1.6;
-}</textarea>
+}
+</textarea>
                 </div>
                 <div class="editor" id="jsEditor">
                     <textarea class="code-textarea" id="jsCode" placeholder="// Your JavaScript code here...">// Add interactivity to your page
@@ -165,7 +169,8 @@ const button = document.createElement('button');
 button.textContent = 'Click me!';
 button.style.cssText = 'padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;';
 button.onclick = () => alert('Hello from the playground!');
-container.appendChild(button);</textarea>
+container.appendChild(button);
+</textarea>
                 </div>
             </div>
         </aside>
