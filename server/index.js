@@ -51,6 +51,7 @@ GUIDELINES:
 3. **Visual Aesthetics**: prioritizing premium, modern designs (gradients, shadows, rounded corners, good typography) unless requested otherwise.
 4. **Safety**: Ensure the code is safe to run in a browser.
 5. **Responsiveness**: Try to make designs responsive where applicable.
+6. **Uniqueness**: The class name of the element must contain timestamp to prevent same class name collision on css
 
 BEHAVIOR:
 - If the user sends a new request, analyze their instruction and the current code.
@@ -59,6 +60,33 @@ BEHAVIOR:
 - Be creative but faithful to the user's intent.
 
 CRITICAL: Return ONLY valid JSON. Do not include markdown formatting or text outside the JSON object.`;
+
+const IMAGE_TO_CODE_SYSTEM_PROMPT = `You are an expert Frontend Developer specializing in converting design mockups to production-ready code.
+
+TASK: Convert the provided design image into pixel-perfect HTML and CSS that matches the design exactly.
+
+RESPONSE FORMAT:
+{
+    "message": "Description of changes and the color Hex found in the code",
+    "html": "Complete HTML code with proper escaping",
+    "css": "Complete CSS code with proper escaping",
+    "js": "Complete JavaScript code with proper escaping"
+}
+
+CRITICAL REQUIREMENTS:
+1. COLOR ACCURACY: Extract exact colors from the image and use them precisely
+2. LAYOUT FIDELITY: Match spacing, alignment, and proportions exactly
+3. TYPOGRAPHY: Match font sizes, weights, and styles as closely as possible
+4. RESPONSIVE: Make it mobile-friendly with breakpoints
+5. MODERN CSS: Use Flexbox/Grid, CSS variables for colors
+6. NO EXTERNAL LIBS: No Tailwind, Bootstrap, or CDN dependencies
+7. PLACEHOLDER IMAGES: Use via.placeholder.com or similar for any images
+8. FULL-WIDTH: Make layouts edge-to-edge unless it's clearly a centered component
+9. PRODUCTION-READY: Clean, well-structured, commented code
+
+
+Do NOT wrap in markdown code blocks.
+ONLY return the raw JSON object.`;
 
 app.post("/api/chat", async (req, res) => {
   try {
@@ -145,7 +173,131 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3009;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
+
+
+// export const sendMessageToClaude = async (history, currentHtml, currentCss, currentJs) => {
+//     try {
+//         const messages = [
+//             ...history.map(msg => ({
+//                 role: msg.role === 'ai' ? 'assistant' : 'user',
+//                 content: msg.content
+//             })),
+//             {
+//                 role: 'user',
+//                 content: `Current Code State:
+// HTML:
+// ${currentHtml}
+
+// CSS:
+// ${currentCss}
+
+// JS:
+// ${currentJs}
+
+// Task: Please update the code based on my previous requests. Return ONLY valid JSON.`
+//             }
+//         ];
+//         //claude-haiku-4-5-20251001
+//         //claude-sonnet-4-5-20250929
+
+//         //2048,4096,8192
+//         const msg = await anthropic.messages.create({
+//             model: "claude-haiku-4-5-20251001",
+//             max_tokens: 8192,
+//             system: SYSTEM_PROMPT,
+//             messages: messages,
+//         });
+
+//         const responseText = msg.content[0].text;
+
+//         console.log("Raw response length:", responseText.length);
+
+//         // AGGRESSIVE MARKDOWN REMOVAL
+//         let jsonText = responseText.trim();
+
+//         // Method 1: Remove markdown code blocks with regex
+//         jsonText = jsonText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+
+//         // Method 2: If still has backticks, find the JSON object directly
+//         if (jsonText.includes('```')) {
+//             const firstBrace = jsonText.indexOf('{');
+//             const lastBrace = jsonText.lastIndexOf('}');
+
+//             if (firstBrace !== -1 && lastBrace !== -1) {
+//                 jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+//             }
+//         }
+
+//         // Final cleanup
+//         jsonText = jsonText.trim();
+
+//         console.log("Cleaned JSON (first 200 chars):", jsonText.substring(0, 200));
+//         console.log("Cleaned JSON (last 200 chars):", jsonText.substring(jsonText.length - 200));
+
+//         // Parse with better error handling
+//         let parsed;
+//         try {
+//             parsed = JSON.parse(jsonText);
+//         } catch (parseError) {
+//             console.error("JSON Parse Error:", parseError.message);
+//             console.error("Failed at position:", parseError.message.match(/position (\d+)/)?.[1]);
+//             console.error("Problematic section:", jsonText.substring(
+//                 Math.max(0, (parseError.message.match(/position (\d+)/)?.[1] || 0) - 50),
+//                 Math.min(jsonText.length, (parseError.message.match(/position (\d+)/)?.[1] || 0) + 50)
+//             ));
+
+//             // Last resort: try to extract manually
+//             console.log("Attempting manual extraction...");
+//             const messageMatch = jsonText.match(/"message"\s*:\s*"([^"\\]*(\\.[^"\\]*)*)"/);
+//             const htmlMatch = jsonText.match(/"html"\s*:\s*"([\s\S]*?)"\s*,\s*"css"/);
+//             const cssMatch = jsonText.match(/"css"\s*:\s*"([\s\S]*?)"\s*,\s*"js"/);
+//             const jsMatch = jsonText.match(/"js"\s*:\s*"([\s\S]*?)"\s*\}/);
+
+//             if (messageMatch || htmlMatch) {
+//                 parsed = {
+//                     message: messageMatch ? messageMatch[1] : 'Code updated',
+//                     html: htmlMatch ? htmlMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') : currentHtml,
+//                     css: cssMatch ? cssMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') : currentCss,
+//                     js: jsMatch ? jsMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') : currentJs
+//                 };
+//                 console.log("✅ Manual extraction successful");
+//             } else {
+//                 throw parseError;
+//             }
+//         }
+
+//         if (!parsed || typeof parsed !== 'object') {
+//             throw new Error('Invalid response format');
+//         }
+
+//         console.log("✅ Successfully parsed response");
+//         console.log("Message:", parsed.message);
+//         console.log("HTML length:", parsed.html?.length || 0);
+//         console.log("CSS length:", parsed.css?.length || 0);
+//         console.log("JS length:", parsed.js?.length || 0);
+
+//         return {
+//             message: parsed.message || 'Code updated successfully',
+//             html: parsed.html || currentHtml || '',
+//             css: parsed.css || currentCss || '',
+//             js: parsed.js || currentJs || ''
+//         };
+
+//     } catch (error) {
+//         console.error("❌ Failed to parse Claude response:", error.message);
+//         console.error("Full raw response (first 1000 chars):",
+//             error.response?.substring(0, 1000) || responseText?.substring(0, 1000) || "No response text");
+
+//         return {
+//             message: "I updated the code, but there was a formatting issue with my response.",
+//             html: currentHtml,
+//             css: currentCss,
+//             js: currentJs
+//         };
+//     }
+// };
+
