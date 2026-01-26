@@ -9,6 +9,7 @@ const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const chatMessages = document.getElementById('chatMessages');
 const newConversationBtn = document.getElementById('newConversationBtn');
+const newPageBtn = document.getElementById('newPageBtn');
 const resetBtn = document.getElementById('resetBtn');
 const conversationList = document.getElementById('conversationList');
 const modelItems = document.querySelectorAll('.model-item');
@@ -24,7 +25,9 @@ const resizerBottom = document.getElementById('resizerBottom');
 // ========== STATE ==========
 let currentModel = 'gpt4';
 let conversations = [];
+let pages = [];
 let currentConversationId = null;
+let currentPageId = null;
 
 // Code History State
 let currentCodeState = { html: '', css: '', js: '' };
@@ -462,7 +465,7 @@ async function getAIResponse(userMessage, imageData = null) {
     const js = jsCode.value;
 
     try {
-        const response = await fetch('http://localhost:3001/api/chat', {
+        const response = await fetch(`http://localhost:3009/api/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -572,6 +575,231 @@ messageInput.addEventListener('keypress', (e) => {
     }
 });
 
+// ========== PAGE MANAGEMENT ==========
+
+// Initialize page
+function initializePage() {
+    const pageId = Date.now().toString();
+    currentPageId = pageId;
+
+    const page = {
+        id: pageId,
+        title: 'New Page',
+        date: new Date().toISOString(),
+        conversationIds: [],
+    };
+
+    pages.unshift(page); //??
+    savePages();
+    return page;
+}
+
+// ... renamePages and deletePages functions remain same ... (skipping to loadPages logic)
+
+// Load a page
+function loadPages(pageId) {
+    // Save current editor state to CURRENT page before switching
+    if (currentPageId) {
+        const currentPage = pages.find(p => p.id === currentPageId);
+        if (currentPage) {
+            currentPage.component = {
+                // html: htmlCode.value,
+                // css: cssCode.value,
+                // js: jsCode.value
+            };
+            savePages();
+        }
+    }
+
+    const page = pages.find(c => c.id === pageId);
+    if (!page) return;
+
+    currentPageId = pageId;
+
+    // Filter allConversations to get only the ones listed in this page
+    const pageConversations = allConversations.filter(conv => 
+        page.conversationIds.includes(conv.id)
+    );
+
+    // Update Page Preview
+    updatePagePreview();
+    // Update UI
+    updatePageList();
+}
+
+function renamePages(pageId, newTitle) {
+    if (!pageId || !newTitle?.trim()) return false;
+
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return false;
+
+    page.title = newTitle.trim();
+    savePages();
+    updatePageList();
+    return true;
+}
+
+function deletePage(pageId) {
+    const index = pages.findIndex(p => p.id === pageId);
+    if (index === -1) return false;
+
+    pages.splice(index, 1);
+    // Reset current page if deleted
+    if (currentPageId === pageId) {
+        currentPageId = pages[0]?.id || null;
+        if (currentPageId) {
+            loadPages(currentPageId);
+        } else {
+            // ?? Clear editors if no pages left
+        }
+    }
+
+    savePages();
+    updatePageList();
+    return true;
+}
+
+// Save component to current page
+function saveComponentToPage(userMessage, aiResponse) {
+    if (!currentPageId) {
+        initializePage();
+    }
+
+    const page = pages.find(p => p.id === currentPageId);
+    if (page) {
+        conversation.messages.push({
+            role: 'user',
+            content: userMessage,
+            timestamp: new Date().toISOString()
+        });
+        conversation.messages.push({
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date().toISOString()
+        });
+
+        // Update title based on first message
+        if (conversation.messages.length === 2) {
+            conversation.title = userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : '');
+        }
+
+        savePages();
+        updatePageList();
+    }
+}
+
+// Save pages to localStorage
+function savePages() {
+    localStorage.setItem('webdev_pages', JSON.stringify(pages));
+}
+
+// Load pages from localStorage
+function loadPages() {
+    const saved = localStorage.getItem('webdev_pages');
+    if (saved) {
+        pages = JSON.parse(saved);
+    }
+}
+
+function loadPage(pageId) {
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return;
+
+    currentPageId = pageId;
+
+}
+
+
+// Update page list UI
+function updatePageList() {
+
+    //clear existing list
+    pageList.innerHTML = '';
+
+    pages.forEach(page => {
+        const item = document.createElement('div');
+        item.className = 'page-item';
+        if (page.id === currentPageId) {
+            item.classList.add('active');
+        }
+
+        // Title and Date container
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'page-info';
+
+        const title = document.createElement('div');
+        title.className = 'page-title';
+        title.textContent = page.title;
+
+        const date = document.createElement('div');
+        date.className = 'page-date';
+        date.textContent = formatDate(page.date);
+
+        infoDiv.appendChild(title);
+        infoDiv.appendChild(date);
+
+        // Actions container
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'conversation-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'action-btn rename-btn';
+        renameBtn.innerHTML = '✏️';
+        renameBtn.title = 'Rename';
+        renameBtn.onclick = (e) => {
+            e.stopPropagation();
+            const newTitle = prompt('Enter new title:', page.title);
+            if (newTitle) renamePage(page.id, newTitle);
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'action-btn delete-btn';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Delete';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deletePage(page.id);
+        };
+
+        actionsDiv.appendChild(renameBtn);
+        actionsDiv.appendChild(deleteBtn);
+
+        item.appendChild(infoDiv);
+        item.appendChild(actionsDiv);
+
+        item.addEventListener('click', () => loadPage(page.id));
+
+        pageList.appendChild(item);
+    });
+}
+
+// New page
+newPageBtn.addEventListener('click', () => {
+    initializePage();
+    updatePageList();
+});
+
+// Open page
+function openPage(pageId) {
+    
+}
+
+function mergePageCode(pageId) {
+    const page = pages.find(p => p.id === pageId);
+    
+    // Reduce all linked conversations into one combined code object
+    return page.conversationIds.reduce((acc, convId) => {
+        const conv = allConversations.find(c => c.id === convId);
+        if (conv) {
+            acc.html += conv.code.html + "\n";
+            acc.css += conv.code.css + "\n";
+            acc.js += conv.code.js + "\n";
+        }
+        return acc;
+    }, { html: "", css: "", js: "" });
+}
+
+
 // ========== CONVERSATION MANAGEMENT ==========
 
 // Initialize conversation
@@ -605,6 +833,8 @@ function initializeConversation() {
 
 // Load a conversation
 function loadConversation(conversationId) {
+
+
     // Save current editor state to CURRENT conversation before switching
     if (currentConversationId) {
         const currentConv = conversations.find(c => c.id === currentConversationId);
@@ -801,7 +1031,10 @@ function updateConversationList() {
         item.appendChild(infoDiv);
         item.appendChild(actionsDiv);
 
-        item.addEventListener('click', () => loadConversation(conv.id));
+        item.addEventListener('click', () => {
+            closePageDisplay();
+            loadConversation(conv.id)
+        });
 
         conversationList.appendChild(item);
     });
@@ -819,8 +1052,6 @@ function formatDate(dateString) {
     if (days < 7) return `${days} days ago`;
     return date.toLocaleDateString();
 }
-
-// New conversation
 
 // New conversation
 newConversationBtn.addEventListener('click', () => {
@@ -889,3 +1120,729 @@ document.addEventListener('keydown', (e) => {
 
 console.log('🚀 Web Dev Playground initialized!');
 console.log('💡 Shortcuts: Ctrl+Enter (update preview) | Ctrl+K (focus chat) | Ctrl+B (toggle sidebar)');
+
+// ========== PAGE DISPLAY MANAGEMENT ==========
+const pageDisplayContent = document.getElementById('pageDisplayContent');
+const componentList = document.getElementById('componentList');
+const selectedComponents = document.getElementById('selectedComponents');
+const pagePreviewFrame = document.getElementById('pagePreviewFrame');
+const closePageBtn = document.getElementById('closePageBtn');
+
+// Changed: Now store objects with both convId and unique instanceId
+let currentPageComponents = []; // Array of {convId, instanceId}
+
+function openPageDisplay(pageId) {
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return;
+
+    currentPageId = pageId;
+    
+    // Load saved components (convert old format if needed)
+    if (page.conversationIds) {
+        if (page.conversationIds.length > 0 && typeof page.conversationIds[0] === 'string') {
+            // Old format: just IDs - convert to new format
+            currentPageComponents = page.conversationIds.map(convId => ({
+                convId: convId,
+                instanceId: Date.now() + Math.random()
+            }));
+        } else {
+            // New format: objects with convId and instanceId
+            currentPageComponents = page.conversationIds || [];
+        }
+    } else {
+        currentPageComponents = [];
+    }
+
+    // Hide main panels
+    document.querySelector('.preview-panel').style.display = 'none';
+    document.querySelector('.editor-panel').style.display = 'none';
+    document.querySelector('.chat-panel').style.display = 'none';
+    document.querySelector('.resizer-right').style.display = 'none';
+    document.querySelector('.resizer-bottom').style.display = 'none';
+
+    // Show page display
+    pageDisplayContent.style.display = 'grid';
+    closePageBtn.style.display = 'flex';
+
+    // Load components
+    loadAvailableComponents();
+    updateSelectedComponentsUI();
+    updatePagePreview();
+}
+
+function closePageDisplay() {
+    // Save current page state
+    if (currentPageId) {
+        const page = pages.find(p => p.id === currentPageId);
+        if (page) {
+            page.conversationIds = currentPageComponents;
+            savePages();
+        }
+    }
+
+    // Show main panels
+    document.querySelector('.preview-panel').style.display = 'flex';
+    document.querySelector('.editor-panel').style.display = 'flex';
+    document.querySelector('.chat-panel').style.display = 'flex';
+    document.querySelector('.resizer-right').style.display = 'block';
+    document.querySelector('.resizer-bottom').style.display = 'block';
+
+    // Hide page display
+    pageDisplayContent.style.display = 'none';
+    closePageBtn.style.display = 'none';
+
+    currentPageId = null;
+    currentPageComponents = [];
+}
+
+function loadAvailableComponents() {
+    componentList.innerHTML = '';
+
+    if (conversations.length === 0) {
+        componentList.innerHTML = '<p style="color: #666; font-size: 12px;">No components available. Create conversations first.</p>';
+        return;
+    }
+
+    conversations.forEach(conv => {
+        const card = document.createElement('div');
+        card.className = 'component-card';
+        
+        // Count how many times this component is used
+        const usageCount = currentPageComponents.filter(c => c.convId === conv.id).length;
+        
+        card.innerHTML = `
+            <div class="component-card-header">
+                <h4>${conv.title} ${usageCount > 0 ? `(${usageCount})` : ''}</h4>
+                <button class="add-component-btn" data-conv-id="${conv.id}">
+                    + Add
+                </button>
+            </div>
+            <p>${conv.messages.length} messages • ${formatDate(conv.date)}</p>
+        `;
+
+        const addBtn = card.querySelector('.add-component-btn');
+        addBtn.addEventListener('click', () => addComponent(conv.id));
+
+        componentList.appendChild(card);
+    });
+}
+
+function addComponent(conversationId) {
+    // Create a new instance with unique ID
+    const newInstance = {
+        convId: conversationId,
+        instanceId: Date.now() + Math.random()
+    };
+    
+    currentPageComponents.push(newInstance);
+    loadAvailableComponents();
+    updateSelectedComponentsUI();
+    updatePagePreview();
+}
+
+function removeComponent(instanceId) {
+    const index = currentPageComponents.findIndex(c => c.instanceId === instanceId);
+    if (index > -1) {
+        currentPageComponents.splice(index, 1);
+    }
+    
+    loadAvailableComponents();
+    updateSelectedComponentsUI();
+    updatePagePreview();
+}
+
+// Drag and Drop State
+let draggedElement = null;
+let draggedIndex = null;
+
+function updateSelectedComponentsUI() {
+    selectedComponents.innerHTML = '';
+
+    if (currentPageComponents.length === 0) {
+        selectedComponents.innerHTML = '<p style="color: #666; margin: 0; font-size: 12px;">No components added yet</p>';
+        return;
+    }
+
+    currentPageComponents.forEach((component, index) => {
+        const conv = conversations.find(c => c.id === component.convId);
+        if (!conv) return;
+
+        const tag = document.createElement('div');
+        tag.className = 'selected-tag';
+        tag.draggable = true;
+        tag.dataset.instanceId = component.instanceId;
+        tag.dataset.index = index;
+        
+        tag.innerHTML = `
+            ${conv.title}
+            <button onclick="removeComponent(${component.instanceId})" title="Remove component">×</button>
+        `;
+
+        // Drag events
+        tag.addEventListener('dragstart', handleDragStart);
+        tag.addEventListener('dragend', handleDragEnd);
+        tag.addEventListener('dragover', handleDragOver);
+        tag.addEventListener('drop', handleDrop);
+        tag.addEventListener('dragenter', handleDragEnter);
+        tag.addEventListener('dragleave', handleDragLeave);
+
+        selectedComponents.appendChild(tag);
+    });
+}
+
+function handleDragStart(e) {
+    draggedElement = e.target;
+    draggedIndex = parseInt(e.target.dataset.index);
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.innerHTML);
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+    
+    // Remove all drag-over classes
+    document.querySelectorAll('.selected-tag').forEach(tag => {
+        tag.classList.remove('drag-over');
+    });
+    
+    draggedElement = null;
+    draggedIndex = null;
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    if (e.target.classList.contains('selected-tag') && e.target !== draggedElement) {
+        e.target.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    if (e.target.classList.contains('selected-tag')) {
+        e.target.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    e.target.classList.remove('drag-over');
+    
+    if (draggedElement !== e.target && e.target.classList.contains('selected-tag')) {
+        const dropIndex = parseInt(e.target.dataset.index);
+        
+        // Reorder array
+        const draggedItem = currentPageComponents[draggedIndex];
+        currentPageComponents.splice(draggedIndex, 1);
+        currentPageComponents.splice(dropIndex, 0, draggedItem);
+        
+        // Update UI
+        updateSelectedComponentsUI();
+        updatePagePreview();
+    }
+    
+    return false;
+}
+
+function updatePagePreview() {
+    const mergedCode = currentPageComponents.reduce((acc, component) => {
+        const conv = conversations.find(c => c.id === component.convId);
+        if (conv && conv.code) {
+            // Use instanceId to make each component unique
+            acc.html += `
+    <!-- Component: ${conv.title} (Instance: ${component.instanceId}) -->
+    <div class="component-section" data-component-id="${component.convId}" data-instance-id="${component.instanceId}">
+        <div class="component-header">
+            <h3>${conv.title}</h3>
+        </div>
+        <div class="component-content">
+            ${conv.code.html || ''}
+        </div>
+    </div>
+`;
+            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
+            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
+        }
+        return acc;
+    }, { html: '', css: '', js: '' });
+
+    // Add base styles for component layout
+    const baseStyles = `
+        /* Base Page Layout Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-section {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px;
+        }
+        
+        .component-section:last-child {
+            border-bottom: none;
+        }
+        
+        .component-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .component-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .component-content {
+            flex: 1;
+        }
+    `;
+
+    const completeHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                ${baseStyles}
+                ${mergedCode.css}
+            </style>
+        </head>
+        <body>
+            ${mergedCode.html}
+            <script>
+                try {
+                    ${mergedCode.js}
+                } catch (error) {
+                    console.error('JavaScript Error:', error);
+                }
+            <\/script>
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob([completeHTML], { type: 'text/html' });
+    pagePreviewFrame.src = URL.createObjectURL(blob);
+}
+
+// Make removeComponent available globally
+window.removeComponent = removeComponent;
+
+// Close page display
+closePageBtn.addEventListener('click', closePageDisplay);
+
+// UPDATE: Modify loadPage function to open page display
+function loadPage(pageId) {
+    openPageDisplay(pageId);
+}
+
+// UPDATE: Initialize pages array if empty
+if (pages.length === 0) {
+    // Don't auto-create a page
+}
+
+// Page Preview Action Buttons
+const copyPageCodeBtn = document.getElementById('copyPageCodeBtn');
+const exportPageBtn = document.getElementById('exportPageBtn');
+const resetPageBtn = document.getElementById('resetPageBtn');
+
+// Copy Page Code
+copyPageCodeBtn.addEventListener('click', () => {
+    const mergedCode = currentPageComponents.reduce((acc, convId) => {
+        const conv = conversations.find(c => c.id === convId);
+        if (conv && conv.code) {
+            acc.html += `
+    <!-- Component: ${conv.title} -->
+    <div class="component-section" data-component-id="${convId}">
+        <div class="component-header">
+            <h3>${conv.title}</h3>
+        </div>
+        <div class="component-content">
+            ${conv.code.html || ''}
+        </div>
+    </div>
+`;
+            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
+            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
+        }
+        return acc;
+    }, { html: '', css: '', js: '' });
+
+    const baseStyles = `
+        /* Base Page Layout Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-section {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px;
+        }
+        
+        .component-section:last-child {
+            border-bottom: none;
+        }
+        
+        .component-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .component-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .component-content {
+            flex: 1;
+        }
+    `;
+
+    const fullPageCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+${baseStyles}
+${mergedCode.css}
+    </style>
+</head>
+<body>
+${mergedCode.html}
+    <script>
+        try {
+${mergedCode.js}
+        } catch (error) {
+            console.error('JavaScript Error:', error);
+        }
+    <\/script>
+</body>
+</html>`;
+
+    navigator.clipboard.writeText(fullPageCode).then(() => {
+        const originalText = copyPageCodeBtn.innerHTML;
+        copyPageCodeBtn.innerHTML = '✅ Copied!';
+        setTimeout(() => {
+            copyPageCodeBtn.innerHTML = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    });
+});
+
+// Export Page as File
+exportPageBtn.addEventListener('click', () => {
+    const mergedCode = currentPageComponents.reduce((acc, convId) => {
+        const conv = conversations.find(c => c.id === convId);
+        if (conv && conv.code) {
+            acc.html += `
+    <!-- Component: ${conv.title} -->
+    <div class="component-section" data-component-id="${convId}">
+        <div class="component-header">
+            <h3>${conv.title}</h3>
+        </div>
+        <div class="component-content">
+            ${conv.code.html || ''}
+        </div>
+    </div>
+`;
+            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
+            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
+        }
+        return acc;
+    }, { html: '', css: '', js: '' });
+
+    const baseStyles = `
+        /* Base Page Layout Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-section {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px;
+        }
+        
+        .component-section:last-child {
+            border-bottom: none;
+        }
+        
+        .component-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .component-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .component-content {
+            flex: 1;
+        }
+    `;
+
+    const fullPageCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+${baseStyles}
+${mergedCode.css}
+    </style>
+</head>
+<body>
+${mergedCode.html}
+    <script>
+        try {
+${mergedCode.js}
+        } catch (error) {
+            console.error('JavaScript Error:', error);
+        }
+    <\/script>
+</body>
+</html>`;
+
+    // Create blob and download
+    const blob = new Blob([fullPageCode], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    // Get page title or use default
+    const page = pages.find(p => p.id === currentPageId);
+    const fileName = page ? `${page.title.replace(/\s+/g, '_')}.html` : 'my_page.html';
+    a.download = fileName;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Show feedback
+    const originalText = exportPageBtn.innerHTML;
+    exportPageBtn.innerHTML = '✅ Exported!';
+    setTimeout(() => {
+        exportPageBtn.innerHTML = originalText;
+    }, 2000);
+});
+
+// Reset Page Components
+resetPageBtn.addEventListener('click', () => {
+    if (currentPageComponents.length === 0) {
+        alert('No components to reset.');
+        return;
+    }
+
+    if (confirm('Are you sure you want to remove all components from this page?')) {
+        currentPageComponents = [];
+        
+        // Save to page
+        if (currentPageId) {
+            const page = pages.find(p => p.id === currentPageId);
+            if (page) {
+                page.conversationIds = [];
+                savePages();
+            }
+        }
+
+        loadAvailableComponents();
+        updateSelectedComponentsUI();
+        updatePagePreview();
+    }
+});
+
+// Helper function to generate merged code (DRY principle)
+function generateMergedPageCode() {
+    const mergedCode = currentPageComponents.reduce((acc, component) => {
+        const conv = conversations.find(c => c.id === component.convId);
+        if (conv && conv.code) {
+            acc.html += `
+    <!-- Component: ${conv.title} -->
+    <div class="component-section" data-component-id="${component.convId}" data-instance-id="${component.instanceId}">
+        <div class="component-header">
+            <h3>${conv.title}</h3>
+        </div>
+        <div class="component-content">
+            ${conv.code.html || ''}
+        </div>
+    </div>
+`;
+            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
+            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
+        }
+        return acc;
+    }, { html: '', css: '', js: '' });
+
+    const baseStyles = `
+        /* Base Page Layout Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-section {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px;
+        }
+        
+        .component-section:last-child {
+            border-bottom: none;
+        }
+        
+        .component-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .component-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .component-content {
+            flex: 1;
+        }
+    `;
+
+    return { mergedCode, baseStyles };
+}
+
+// Copy Page Code
+copyPageCodeBtn.addEventListener('click', () => {
+    const { mergedCode, baseStyles } = generateMergedPageCode();
+
+    const fullPageCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+${baseStyles}
+${mergedCode.css}
+    </style>
+</head>
+<body>
+${mergedCode.html}
+    <script>
+        try {
+${mergedCode.js}
+        } catch (error) {
+            console.error('JavaScript Error:', error);
+        }
+    <\/script>
+</body>
+</html>`;
+
+    navigator.clipboard.writeText(fullPageCode).then(() => {
+        const originalText = copyPageCodeBtn.innerHTML;
+        copyPageCodeBtn.innerHTML = '✅ Copied!';
+        setTimeout(() => {
+            copyPageCodeBtn.innerHTML = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    });
+});
+
+// Export Page as File
+exportPageBtn.addEventListener('click', () => {
+    const { mergedCode, baseStyles } = generateMergedPageCode();
+
+    const fullPageCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+${baseStyles}
+${mergedCode.css}
+    </style>
+</head>
+<body>
+${mergedCode.html}
+    <script>
+        try {
+${mergedCode.js}
+        } catch (error) {
+            console.error('JavaScript Error:', error);
+        }
+    <\/script>
+</body>
+</html>`;
+
+    // Create blob and download
+    const blob = new Blob([fullPageCode], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    // Get page title or use default
+    const page = pages.find(p => p.id === currentPageId);
+    const fileName = page ? `${page.title.replace(/\s+/g, '_')}.html` : 'my_page.html';
+    a.download = fileName;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Show feedback
+    const originalText = exportPageBtn.innerHTML;
+    exportPageBtn.innerHTML = '✅ Exported!';
+    setTimeout(() => {
+        exportPageBtn.innerHTML = originalText;
+    }, 2000);
+});

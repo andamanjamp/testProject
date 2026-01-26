@@ -1,0 +1,560 @@
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTikToks();
+    });
+    // document.addEventListener('DOMContentLoaded', () => {
+    // ================================================================================================================================
+    // -------------------- user please copy your tiktok video url and paste it, following the format here ----------------------------
+    // ================================================================================================================================
+    function loadTikToks() {
+        const tiktokVideos = [
+            { url: "https://www.tiktok.com/@eqh2cbndf2/video/7588865269888470303", thumbnail: "https://cdn.prod.website-files.com/6230cce907f5a55f9a4b0e6f/6230cce907f5a50b984b1855_tiktok1.PNG" },
+            { url: "https://www.tiktok.com/@theaisoundlab11/video/7592302746036964626", thumbnail: "https://cdn.prod.website-files.com/6230cce907f5a55f9a4b0e6f/6230cce907f5a50b984b1855_tiktok1.PNG" },
+            { url: "https://www.tiktok.com/@bookmeowstory/video/7581557676581211413", thumbnail: "https://cdn.prod.website-files.com/6230cce907f5a55f9a4b0e6f/6230cce907f5a50b984b1855_tiktok1.PNG" },
+            { url: "https://www.tiktok.com/@theaisoundlab11/video/7592302746036964626", thumbnail: "https://cdn.prod.website-files.com/6230cce907f5a55f9a4b0e6f/6230cce907f5a50b984b1855_tiktok1.PNG" },
+            { url: "https://www.tiktok.com/@theaisoundlab11/video/7592302746036964626", thumbnail: "https://cdn.prod.website-files.com/6230cce907f5a55f9a4b0e6f/6230cce907f5a50b984b1855_tiktok1.PNG" },
+        ];
+
+        // ================================================================================================================================
+        // ================================================================================================================================
+
+        const container = document.getElementById('phones-container-1732849301');
+        const dotsContainer = document.getElementById('dots-container');
+        const prevBtn = document.querySelector('.prev-btn-1732849301');
+        const nextBtn = document.querySelector('.next-btn-1732849301');
+
+        // Render TikTok videos with thumbnails
+        container.innerHTML = tiktokVideos.map((video, index) => {
+            // Extract video ID more robustly, handling query parameters
+            const videoId = video.url.split('?')[0].split('/').pop();
+            return `
+                <div class="phone-1732849301" data-position="${index + 1}">
+                    <div class="click-overlay-1732849301"></div>
+                    <div class="phone-content-1732849301">
+                        <div class="video-preview-container-1732849301">
+                            <img src="${video.thumbnail}" alt="TikTok Preview" class="video-thumbnail-1732849301">
+                    
+                        </div>
+                        <div class="embed-container-1732849301">
+                            <blockquote class="tiktok-embed"
+                                cite="${video.url}"
+                                data-video-id="${videoId}"
+                                style="max-width: 605px;min-width: 325px; margin: 0;">
+                                <section style="height:0"></section>
+                            </blockquote>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Render dots
+        dotsContainer.innerHTML = tiktokVideos.map((_, index) =>
+            `<span class="dot-1732849301 ${index === 2 ? 'active-1732849301' : ''}" data-index="${index}"></span>`
+        ).join('');
+
+        // Initialize TikTok embeds with dynamic script loading
+        function initEmbeds() {
+            // Check if script is already present
+            if (!document.querySelector('script[src="https://www.tiktok.com/embed.js"]')) {
+                const script = document.createElement('script');
+                script.src = "https://www.tiktok.com/embed.js";
+                script.async = true;
+                script.onload = () => {
+                    if (window.tiktokEmbedLoad) window.tiktokEmbedLoad();
+                };
+                document.body.appendChild(script);
+            } else {
+                if (window.tiktokEmbedLoad) {
+                    window.tiktokEmbedLoad();
+                }
+            }
+        }
+
+        // Small delay to ensure DOM is fully ready before init
+        setTimeout(initEmbeds, 100);
+
+        const phones = document.querySelectorAll('.phone-1732849301');
+        const dots = document.querySelectorAll('.dot-1732849301');
+        const totalPhones = phones.length;
+        const maxVisiblePhones = 5;
+        let currentCenter = 2;
+
+        function updatePositions() {
+            phones.forEach((phone, index) => {
+                const offset = index - currentCenter;
+                const position = 3 + offset;
+
+                phone.setAttribute('data-position', position);
+
+                if (position < 1 || position > 5) {
+                    phone.style.display = 'none';
+                } else {
+                    phone.style.display = 'block';
+                }
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active-1732849301', index === currentCenter);
+            });
+
+            prevBtn.disabled = currentCenter === 0;
+            nextBtn.disabled = currentCenter === totalPhones - 1;
+        }
+
+        function slideNext() {
+            if (currentCenter < totalPhones - 1) {
+                currentCenter++;
+                updatePositions();
+            }
+        }
+
+        function slidePrev() {
+            if (currentCenter > 0) {
+                currentCenter--;
+                updatePositions();
+            }
+        }
+
+        let isAnimating = false;
+
+        function goToSlide(index) {
+            if (index >= 0 && index < totalPhones && index !== currentCenter && !isAnimating) {
+                animateToSlide(index);
+            }
+        }
+
+        // Smooth animation when jumping to far slides
+        function animateToSlide(targetIndex) {
+            if (isAnimating) return;
+
+            isAnimating = true;
+            const direction = targetIndex > currentCenter ? 1 : -1;
+            const steps = Math.abs(targetIndex - currentCenter);
+            let stepCount = 0;
+
+            function animateStep() {
+                if (stepCount < steps) {
+                    currentCenter += direction;
+                    updatePositions();
+                    stepCount++;
+                    // 300ms matches the CSS transition duration
+                    setTimeout(animateStep, 300);
+                } else {
+                    isAnimating = false;
+                }
+            }
+
+            animateStep();
+        }
+
+        nextBtn.addEventListener('click', slideNext);
+        prevBtn.addEventListener('click', slidePrev);
+
+        dots.forEach((dot) => {
+            dot.addEventListener('click', function () {
+                const index = parseInt(this.getAttribute('data-index'));
+                if (!isNaN(index)) {
+                    goToSlide(index);
+                }
+            });
+        });
+
+        phones.forEach((phone, index) => {
+            phone.addEventListener('click', function () {
+                if (index !== currentCenter) {
+                    goToSlide(index);
+                }
+            });
+        });
+
+        // Touch swipe support 
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            const swipeThreshold = 50;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    slideNext();
+                } else {
+                    slidePrev();
+                }
+            }
+        });
+        updatePositions();
+    }
+    ;
+</script>
+
+<div class="container-1732849301">
+    <h1 class="title-1732849301">รีวิวผลิตภัณฑ์จากผู้ใช้จริง</h1>
+    <div class="carousel-wrapper-1732849301">
+        <button class="nav-btn-1732849301 prev-btn-1732849301" aria-label="Previous">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+        <div class="phones-container-1732849301" id="phones-container-1732849301">
+            <!-- tiktok card will show here -->
+        </div>
+        <button class="nav-btn-1732849301 next-btn-1732849301" aria-label="Next">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </button>
+    </div>
+    <div class="dots-1732849301" id="dots-container"></div>
+</div>
+
+<style>
+    :root {
+        --bg-color-1732849301: #f5f5f0;
+        --text-dark-1732849301: #4a4a4a;
+        --dot-inactive-1732849301: #d4d4d4;
+        --dot-active-1732849301: #9cc4d9;
+        --phone-bg-1732849301: #6b6b5e;
+    }
+
+    .container-1732849301 {
+        max-width: 1400px;
+        width: 100%;
+        margin: 50px auto;
+    }
+
+    .title-1732849301 {
+        text-align: center;
+        font-size: 28px;
+        font-weight: 500;
+        color: var(--text-dark-1732849301);
+        margin-bottom: 50px;
+        letter-spacing: 0.5px;
+    }
+
+    .carousel-wrapper-1732849301 {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .nav-btn-1732849301 {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: var(--text-dark-1732849301);
+        flex-shrink: 0;
+        z-index: 10;
+    }
+
+    .nav-btn-1732849301:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .phones-container-1732849301 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 40px;
+        position: relative;
+        min-height: 550px;
+        perspective: 1200px;
+        overflow: visible;
+        flex: 1;
+    }
+
+    .phone-1732849301 {
+        width: 320px;
+        max-height: 550px;
+        background: #2a2a2a;
+        border-radius: 25px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+        position: absolute;
+        overflow: hidden;
+    }
+
+    .phone-1732849301[data-position="1"] {
+        transform: translateX(-35rem) scale(0.75);
+        z-index: 1;
+        opacity: 0.6;
+    }
+
+    .phone-1732849301[data-position="2"] {
+        /* transform: translateX(-280px) scale(0.85); */
+        transform: translateX(-20rem) scale(0.85);
+        z-index: 2;
+        opacity: 0.8;
+    }
+
+    .phone-1732849301[data-position="3"] {
+        transform: translateX(0) scale(1);
+        z-index: 3;
+        opacity: 1;
+    }
+
+    .phone-1732849301[data-position="4"] {
+        /* transform: translateX(280px) scale(0.85); */
+        transform: translateX(20rem) scale(0.85);
+        z-index: 2;
+        opacity: 0.8;
+    }
+
+    .phone-1732849301[data-position="5"] {
+        transform: translateX(35rem) scale(0.75);
+        z-index: 1;
+        opacity: 0.6;
+    }
+
+    .click-overlay-1732849301 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        cursor: pointer;
+    }
+
+    .phone-1732849301[data-position="3"] .click-overlay-1732849301 {
+        display: none;
+    }
+
+    .phone-content-1732849301 {
+        width: 100%;
+        height: 100%;
+        border-radius: 25px;
+        overflow: hidden;
+        position: relative;
+        background: #1a1a1a;
+    }
+
+    /* Thumbnail Preview Styles */
+    .video-preview-container-1732849301 {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .video-thumbnail-1732849301 {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.8;
+        transition: opacity 0.3s ease;
+    }
+
+    .phone-1732849301[data-position="3"] .video-thumbnail-1732849301 {
+        opacity: 1;
+    }
+
+    .play-button-overlay-1732849301 {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -120%);
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 50%;
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 5;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .play-button-overlay-1732849301:hover {
+        background: rgba(0, 0, 0, 0.6);
+        transform: translate(-50%, -50%) scale(1.1);
+        border-color: #fff;
+    }
+
+    .play-button-overlay-1732849301 svg {
+        margin-left: 5px;
+    }
+
+    .phone-1732849301[data-position="3"] .video-preview-container-1732849301:hover .play-button-overlay-1732849301 {
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    /* Embed Container Styles */
+    .embed-container-1732849301 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        pointer-events: none;
+        z-index: 1;
+        background: #000;
+    }
+
+    .phone-1732849301[data-position="3"] .embed-container-1732849301 {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .phone-1732849301[data-position="3"] .video-preview-container-1732849301 {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+
+    .dots-1732849301 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .dot-1732849301 {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--dot-inactive-1732849301);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .dot-1732849301.active-1732849301 {
+        background-color: var(--dot-active-1732849301);
+        transform: scale(1.3);
+    }
+
+    @media (max-width: 1200px) {
+        .phones-container-1732849301 {
+            min-height: 450px;
+            gap: 30px;
+        }
+
+        .phone-1732849301 {
+            width: 200px;
+            height: 400px;
+        }
+
+        .phone-1732849301[data-position="1"] {
+            transform: translateX(-340px) scale(0.75);
+        }
+
+        .phone-1732849301[data-position="2"] {
+            transform: translateX(-200px) scale(0.85);
+        }
+
+        .phone-1732849301[data-position="4"] {
+            transform: translateX(200px) scale(0.85);
+        }
+
+        .phone-1732849301[data-position="5"] {
+            transform: translateX(340px) scale(0.75);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .title-1732849301 {
+            font-size: 22px;
+            margin-bottom: 30px;
+        }
+
+        .carousel-wrapper-1732849301 {
+            gap: 15px;
+        }
+
+        .nav-btn-1732849301 {
+            width: 40px;
+            height: 40px;
+        }
+
+        .nav-btn-1732849301 svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .phones-container-1732849301 {
+            min-height: 350px;
+            gap: 25px;
+        }
+
+        .phone-1732849301 {
+            width: 160px;
+            height: 320px;
+        }
+
+        .phone-1732849301[data-position="1"] {
+            transform: translateX(-260px) scale(0.7);
+        }
+
+        .phone-1732849301[data-position="2"] {
+            transform: translateX(-155px) scale(0.85);
+        }
+
+        .phone-1732849301[data-position="4"] {
+            transform: translateX(155px) scale(0.85);
+        }
+
+        .phone-1732849301[data-position="5"] {
+            transform: translateX(260px) scale(0.7);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .carousel-wrapper-1732849301 {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .nav-btn-1732849301 {
+            position: relative;
+        }
+
+        .phones-container-1732849301 {
+            min-height: 500px;
+            width: 100%;
+        }
+
+        .phone-1732849301 {
+            width: 240px;
+            height: 480px;
+        }
+
+        .phone-1732849301[data-position="1"],
+        .phone-1732849301[data-position="2"],
+        .phone-1732849301[data-position="3"],
+        .phone-1732849301[data-position="4"],
+        .phone-1732849301[data-position="5"] {
+            transform: translateX(0) scale(1);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .phone-1732849301[data-position="3"] {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    }
+</style>
