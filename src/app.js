@@ -492,14 +492,110 @@ async function getAIResponse(userMessage, imageData = null) {
 }
 
 // Send message
+// async function sendMessage() {
+//     const message = messageInput.value.trim();
+    
+//     // Allow sending if there's a message OR an attachment
+//     if (!message && !currentAttachment) return;
+
+//     // Store attachment reference before clearing
+//     const attachmentToSend = currentAttachment;
+
+//     // Add user message to UI
+//     addMessage('user', message || '(Image attached)', attachmentToSend);
+//     messageInput.value = '';
+    
+//     // Clear attachment UI
+//     if (currentAttachment) {
+//         currentAttachment = null;
+//         attachmentSection.style.display = 'none';
+//         attachmentPreview.innerHTML = '';
+//     }
+
+//     // Show loading
+//     showLoading();
+
+//     try {
+//         // SNAPSHOT: Save current code state before AI update
+//         if (!isViewingPrevious) {
+//             previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
+//             currentCodeState = { ...previousCodeState };
+//         } else {
+//             toggleVersion(false);
+//             previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
+//         }
+        
+//         // Get AI response with image
+//         const imageData = attachmentToSend ? attachmentToSend.dataUrl : null;
+//         const data = await getAIResponse(message || 'Please analyze this image and update the code accordingly', imageData);
+
+//         // Remove loading
+//         removeLoading();
+
+//         // Update Editors with new code
+//         if (data.html) {
+//             htmlCode.value = data.html;
+//             currentCodeState.html = data.html;
+//         }
+//         if (data.css) {
+//             cssCode.value = data.css;
+//             currentCodeState.css = data.css;
+//         }
+//         if (data.javascript) {
+//             jsCode.value = data.javascript;
+//             currentCodeState.js = data.javascript;
+//         }
+
+//         // Trigger preview update
+//         updatePreview();
+
+//         // PERSISTENCE: Save updated code to conversation
+//         if (currentConversationId) {
+//             const currentConv = conversations.find(c => c.id === currentConversationId);
+//             if (currentConv) {
+//                 currentConv.code = {
+//                     html: htmlCode.value,
+//                     css: cssCode.value,
+//                     js: jsCode.value
+//                 };
+//                 saveConversations();
+//             }
+//         }
+
+//         // Add AI explanation to chat
+//         const explanation = data.explanation || "I've updated the code based on your request.";
+//         addMessage('assistant', explanation);
+
+//         // Save to conversation (save the message with attachment info)
+//         const userMessageContent = message || '(Image attached)';
+//         saveMessageToConversation(userMessageContent, explanation);
+
+//     } catch (error) {
+//         removeLoading();
+//         addMessage('assistant', 'Sorry, I encountered an error communicating with the server. Please make sure the backend is running and your API key is set.');
+//         console.error('Error:', error);
+//     }
+// }
+// Send message
 async function sendMessage() {
     const message = messageInput.value.trim();
-    // Allow sending if there's a message OR an image (if we add image support later)
-    if (!message) return;
+    
+    // Allow sending if there's a message OR an attachment
+    if (!message && !currentAttachment) return;
+
+    // Store attachment reference before clearing
+    const attachmentToSend = currentAttachment;
 
     // Add user message to UI
-    addMessage('user', message);
+    addMessage('user', message || '(Image attached)', attachmentToSend);
     messageInput.value = '';
+    
+    // Clear attachment UI
+    if (currentAttachment) {
+        currentAttachment = null;
+        attachmentSection.style.display = 'none';
+        attachmentPreview.innerHTML = '';
+    }
 
     // Show loading
     showLoading();
@@ -513,9 +609,10 @@ async function sendMessage() {
             toggleVersion(false);
             previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
         }
-        // Get AI response
-        // Note: Image upload support can be added here by passing selected image data
-        const data = await getAIResponse(message);
+        
+        // Get AI response with image
+        const imageData = attachmentToSend ? attachmentToSend.dataUrl : null;
+        const data = await getAIResponse(message || 'Please analyze this image and update the code accordingly', imageData);
 
         // Remove loading
         removeLoading();
@@ -554,8 +651,9 @@ async function sendMessage() {
         const explanation = data.explanation || "I've updated the code based on your request.";
         addMessage('assistant', explanation);
 
-        // Save to conversation
-        saveMessageToConversation(message, explanation);
+        // Save to conversation (save the message with attachment info)
+        const userMessageContent = message || '(Image attached)';
+        saveMessageToConversation(userMessageContent, explanation);
 
     } catch (error) {
         removeLoading();
@@ -564,14 +662,18 @@ async function sendMessage() {
     }
 }
 
+
 // Send button click
 sendBtn.addEventListener('click', sendMessage);
 
-// Enter key to send
+// Enter key to send (updated to handle attachments)
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage();
+        // Allow sending if there's text or attachment
+        if (messageInput.value.trim() || currentAttachment) {
+            sendMessage();
+        }
     }
 });
 
@@ -1846,3 +1948,649 @@ ${mergedCode.js}
         exportPageBtn.innerHTML = originalText;
     }, 2000);
 });
+
+// ========== SHAPE SELECTION FOR AI EDITING (IMPROVED) ==========
+const shapeSelectBtn = document.getElementById('shapeSelectBtn');
+const shapeModal = document.getElementById('shapeModal');
+const cancelShapeBtn = document.getElementById('cancelShapeBtn');
+const shapeOptionBtns = document.querySelectorAll('.shape-option-btn');
+const selectionCanvas = document.getElementById('selectionCanvas');
+const selectionInfo = document.getElementById('selectionInfo');
+const editSelectionModal = document.getElementById('editSelectionModal');
+const selectedElementsInfo = document.getElementById('selectedElementsInfo');
+const editInstructionInput = document.getElementById('editInstructionInput');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const sendEditBtn = document.getElementById('sendEditBtn');
+
+let isSelectionMode = false;
+let selectedShape = null;
+let isDrawing = false;
+let startX = 0;
+let startY = 0;
+
+// Store multiple selections with their shapes
+let allSelections = []; // Array of {bounds, elements, number, shape}
+let selectionCounter = 1;
+
+// Open shape selection modal
+shapeSelectBtn.addEventListener('click', () => {
+    if (isSelectionMode) {
+        // If already in selection mode, show options to finish or continue
+        if (allSelections.length > 0) {
+            const action = confirm(`You have ${allSelections.length} selection(s). Click OK to finish and edit, or Cancel to continue selecting.`);
+            if (action) {
+                finishSelection();
+            }
+        } else {
+            deactivateSelectionMode();
+        }
+    } else {
+        shapeModal.showModal();
+    }
+});
+
+// Cancel shape selection
+cancelShapeBtn.addEventListener('click', () => {
+    shapeModal.close();
+});
+
+// Select shape and activate selection mode
+shapeOptionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        selectedShape = btn.dataset.shape;
+        shapeModal.close();
+        activateSelectionMode();
+    });
+});
+
+function activateSelectionMode() {
+    isSelectionMode = true;
+    shapeSelectBtn.classList.add('active');
+    shapeSelectBtn.title = 'Finish selection';
+    
+    // Reset selections if starting fresh
+    if (allSelections.length === 0) {
+        selectionCounter = 1;
+    }
+    
+    // Setup canvas
+    const previewWrapper = document.querySelector('.preview-wrapper');
+    const rect = previewWrapper.getBoundingClientRect();
+    
+    selectionCanvas.width = rect.width - 24;
+    selectionCanvas.height = rect.height - 24;
+    selectionCanvas.style.display = 'block';
+    selectionCanvas.classList.add('active');
+    
+    // Show info
+    updateSelectionInfo();
+    
+    // Add event listeners
+    selectionCanvas.addEventListener('mousedown', handleSelectionStart);
+    selectionCanvas.addEventListener('mousemove', handleSelectionMove);
+    selectionCanvas.addEventListener('mouseup', handleSelectionEnd);
+    
+    // Redraw existing selections
+    redrawAllSelections();
+}
+
+function deactivateSelectionMode() {
+    isSelectionMode = false;
+    shapeSelectBtn.classList.remove('active');
+    shapeSelectBtn.title = 'Select area to edit';
+    
+    selectionCanvas.style.display = 'none';
+    selectionCanvas.classList.remove('active');
+    selectionInfo.style.display = 'none';
+    
+    // Remove event listeners
+    selectionCanvas.removeEventListener('mousedown', handleSelectionStart);
+    selectionCanvas.removeEventListener('mousemove', handleSelectionMove);
+    selectionCanvas.removeEventListener('mouseup', handleSelectionEnd);
+    
+    // Clear canvas and selections
+    const ctx = selectionCanvas.getContext('2d');
+    ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+    
+    allSelections = [];
+    selectionCounter = 1;
+    selectedShape = null;
+}
+
+function updateSelectionInfo() {
+    const shapeType = selectedShape || 'shape';
+    const count = allSelections.length;
+    selectionInfo.innerHTML = `
+        <strong>Selection Mode Active</strong><br>
+        Drawing: ${shapeType} | Selected: ${count} area(s)<br>
+        <small>Click and drag to select. Click the button above to finish.</small>
+    `;
+    selectionInfo.style.display = 'block';
+}
+
+function handleSelectionStart(e) {
+    isDrawing = true;
+    const rect = selectionCanvas.getBoundingClientRect();
+    startX = e.clientX - rect.left;
+    startY = e.clientY - rect.top;
+}
+
+function handleSelectionMove(e) {
+    if (!isDrawing) return;
+    
+    const rect = selectionCanvas.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    
+    // Redraw all existing selections first
+    redrawAllSelections();
+    
+    // Draw current shape being created
+    const ctx = selectionCanvas.getContext('2d');
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(102, 126, 234, 0.15)';
+    ctx.setLineDash([5, 5]); // Dashed line for current drawing
+    
+    if (selectedShape === 'rectangle') {
+        const width = currentX - startX;
+        const height = currentY - startY;
+        ctx.fillRect(startX, startY, width, height);
+        ctx.strokeRect(startX, startY, width, height);
+    } else if (selectedShape === 'circle') {
+        const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+        ctx.beginPath();
+        ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    ctx.setLineDash([]); // Reset dash
+}
+
+function handleSelectionEnd(e) {
+    if (!isDrawing) return;
+    isDrawing = false;
+    
+    const rect = selectionCanvas.getBoundingClientRect();
+    const endX = e.clientX - rect.left;
+    const endY = e.clientY - rect.top;
+    
+    // Ignore very small selections (likely accidental clicks)
+    const minSize = 10;
+    if (Math.abs(endX - startX) < minSize && Math.abs(endY - startY) < minSize) {
+        redrawAllSelections();
+        return;
+    }
+    
+    // Calculate selection bounds
+    const selectionBounds = calculateSelectionBounds(startX, startY, endX, endY);
+    
+    // Find elements in selection
+    const elements = findElementsInSelection(selectionBounds);
+    
+    if (elements.length > 0) {
+        // Store this selection
+        allSelections.push({
+            bounds: selectionBounds,
+            elements: elements,
+            number: selectionCounter++,
+            shape: selectedShape
+        });
+        
+        // Redraw all selections with their numbers
+        redrawAllSelections();
+        updateSelectionInfo();
+        
+        // Provide feedback
+        console.log(`Selection #${selectionCounter - 1}: Found ${elements.length} element(s)`);
+    } else {
+        alert('No elements found in selection. Try selecting a larger area or different location.');
+        redrawAllSelections();
+    }
+}
+
+function redrawAllSelections() {
+    const ctx = selectionCanvas.getContext('2d');
+    ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+    
+    allSelections.forEach((selection, index) => {
+        const bounds = selection.bounds;
+        const number = selection.number;
+        
+        // Draw shape
+        ctx.strokeStyle = '#667eea';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(102, 126, 234, 0.1)';
+        ctx.setLineDash([]);
+        
+        if (bounds.shape === 'rectangle') {
+            const width = bounds.right - bounds.left;
+            const height = bounds.bottom - bounds.top;
+            ctx.fillRect(bounds.left, bounds.top, width, height);
+            ctx.strokeRect(bounds.left, bounds.top, width, height);
+            
+            // Draw number label
+            drawNumberLabel(ctx, bounds.left + 5, bounds.top + 5, number);
+        } else if (bounds.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(bounds.centerX, bounds.centerY, bounds.radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Draw number label at center
+            drawNumberLabel(ctx, bounds.centerX - 10, bounds.centerY - 10, number);
+        }
+    });
+}
+
+function drawNumberLabel(ctx, x, y, number) {
+    // Draw background circle
+    ctx.fillStyle = '#667eea';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 12, 15, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Draw number
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(number.toString(), x + 12, y + 13);
+}
+
+function calculateSelectionBounds(x1, y1, x2, y2) {
+    if (selectedShape === 'rectangle') {
+        return {
+            left: Math.min(x1, x2),
+            top: Math.min(y1, y2),
+            right: Math.max(x1, x2),
+            bottom: Math.max(y1, y2),
+            shape: 'rectangle'
+        };
+    } else if (selectedShape === 'circle') {
+        const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        return {
+            centerX: x1,
+            centerY: y1,
+            radius: radius,
+            shape: 'circle'
+        };
+    }
+}
+
+function findElementsInSelection(bounds) {
+    const elements = [];
+    
+    try {
+        const iframe = document.getElementById('previewFrame');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        
+        if (!iframeDoc || !iframeDoc.body) {
+            console.error('Cannot access iframe document');
+            return elements;
+        }
+        
+        const allElements = iframeDoc.body.querySelectorAll('*');
+        
+        // Get precise iframe position
+        const iframeRect = iframe.getBoundingClientRect();
+        const canvasRect = selectionCanvas.getBoundingClientRect();
+        
+        // Calculate offset (iframe position relative to canvas)
+        const offsetX = iframeRect.left - canvasRect.left;
+        const offsetY = iframeRect.top - canvasRect.top;
+        
+        allElements.forEach(element => {
+            const elementRect = element.getBoundingClientRect();
+            
+            // Skip if element has no size
+            if (elementRect.width === 0 || elementRect.height === 0) return;
+            
+            // Adjust element position to canvas coordinates
+            const adjustedRect = {
+                left: elementRect.left - iframeRect.left,
+                top: elementRect.top - iframeRect.top,
+                right: elementRect.right - iframeRect.left,
+                bottom: elementRect.bottom - iframeRect.top,
+                width: elementRect.width,
+                height: elementRect.height
+            };
+            
+            // Check if element overlaps with selection (improved accuracy)
+            if (isElementInSelection(bounds, adjustedRect)) {
+                elements.push({
+                    element: element,
+                    tagName: element.tagName,
+                    className: element.className,
+                    id: element.id,
+                    textContent: element.textContent?.trim().substring(0, 50),
+                    rect: adjustedRect
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Error accessing iframe:', error);
+    }
+    
+    return elements;
+}
+
+function isElementInSelection(selectionBounds, elementRect) {
+    if (selectionBounds.shape === 'rectangle') {
+        // Check for overlap (not just full containment)
+        return !(
+            elementRect.right < selectionBounds.left ||
+            elementRect.left > selectionBounds.right ||
+            elementRect.bottom < selectionBounds.top ||
+            elementRect.top > selectionBounds.bottom
+        );
+    } else if (selectionBounds.shape === 'circle') {
+        // Check if any corner or center of element is within circle
+        const points = [
+            { x: elementRect.left, y: elementRect.top },
+            { x: elementRect.right, y: elementRect.top },
+            { x: elementRect.left, y: elementRect.bottom },
+            { x: elementRect.right, y: elementRect.bottom },
+            { x: (elementRect.left + elementRect.right) / 2, y: (elementRect.top + elementRect.bottom) / 2 }
+        ];
+        
+        return points.some(point => {
+            const distance = Math.sqrt(
+                Math.pow(point.x - selectionBounds.centerX, 2) + 
+                Math.pow(point.y - selectionBounds.centerY, 2)
+            );
+            return distance <= selectionBounds.radius;
+        });
+    }
+    
+    return false;
+}
+
+function finishSelection() {
+    if (allSelections.length === 0) {
+        alert('No areas selected. Please select at least one area first.');
+        return;
+    }
+    
+    showEditModal();
+}
+
+function showEditModal() {
+    // Build comprehensive summary of all selections
+    let summary = `You have selected ${allSelections.length} area(s):\n\n`;
+    
+    allSelections.forEach(selection => {
+        summary += `━━━ AREA #${selection.number} (${selection.shape}) ━━━\n`;
+        summary += `Elements found: ${selection.elements.length}\n`;
+        
+        const elementSummary = selection.elements.slice(0, 5).map(el => {
+            let desc = `  • <${el.tagName.toLowerCase()}`;
+            if (el.id) desc += ` id="${el.id}"`;
+            if (el.className) desc += ` class="${el.className.substring(0, 30)}"`;
+            desc += '>';
+            if (el.textContent) desc += ` "${el.textContent.substring(0, 30)}..."`;
+            return desc;
+        }).join('\n');
+        
+        summary += elementSummary;
+        if (selection.elements.length > 5) {
+            summary += `\n  ... and ${selection.elements.length - 5} more`;
+        }
+        summary += '\n\n';
+    });
+    
+    selectedElementsInfo.textContent = summary;
+    editInstructionInput.value = '';
+    editInstructionInput.placeholder = `Tell AI what to change. Reference areas by number (e.g., "Make area #1 blue and area #2 larger")`;
+    
+    editSelectionModal.showModal();
+}
+
+cancelEditBtn.addEventListener('click', () => {
+    editSelectionModal.close();
+    // Don't deactivate - let user continue selecting
+});
+
+sendEditBtn.addEventListener('click', async () => {
+    const instruction = editInstructionInput.value.trim();
+    if (!instruction) {
+        alert('Please enter editing instructions');
+        return;
+    }
+    
+    // Build user-visible message with selection summary
+    let userDisplayMessage = instruction + '\n\n';
+    userDisplayMessage += `📍 Selected ${allSelections.length} area(s):\n`;
+    
+    allSelections.forEach(selection => {
+        userDisplayMessage += `\n▸ Area #${selection.number} (${selection.shape}): ${selection.elements.length} elements\n`;
+        
+        // Show first 3 elements as preview
+        const preview = selection.elements.slice(0, 3).map(el => {
+            let desc = `  • <${el.tagName.toLowerCase()}`;
+            if (el.id) desc += ` #${el.id}`;
+            if (el.className) desc += ` .${el.className.split(' ')[0]}`;
+            desc += '>';
+            return desc;
+        }).join('\n');
+        
+        userDisplayMessage += preview;
+        if (selection.elements.length > 3) {
+            userDisplayMessage += `\n  • ... and ${selection.elements.length - 3} more`;
+        }
+    });
+    
+    // Build comprehensive context for AI with full details
+    let enhancedMessage = `${instruction}\n\n`;
+    enhancedMessage += `=== SELECTED AREAS (${allSelections.length}) ===\n`;
+    
+    allSelections.forEach(selection => {
+        enhancedMessage += `\nAREA #${selection.number} (${selection.shape}):\n`;
+        const elementsContext = selection.elements.map(el => ({
+            tag: el.tagName,
+            id: el.id,
+            class: el.className,
+            text: el.textContent
+        }));
+        enhancedMessage += JSON.stringify(elementsContext, null, 2) + '\n';
+    });
+    
+    // Close modal and deactivate selection mode
+    editSelectionModal.close();
+    deactivateSelectionMode();
+    
+    // Show user message with selection context in chat
+    addMessage('user', userDisplayMessage);
+    messageInput.value = '';
+    
+    showLoading();
+    
+    try {
+        // Save current code state before AI update
+        if (!isViewingPrevious) {
+            previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
+            currentCodeState = { ...previousCodeState };
+        } else {
+            toggleVersion(false);
+            previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
+        }
+        
+        // Send enhanced message with all selection context to AI
+        const data = await getAIResponse(enhancedMessage);
+        
+        removeLoading();
+        
+        // Update editors
+        if (data.html) {
+            htmlCode.value = data.html;
+            currentCodeState.html = data.html;
+        }
+        if (data.css) {
+            cssCode.value = data.css;
+            currentCodeState.css = data.css;
+        }
+        if (data.javascript) {
+            jsCode.value = data.javascript;
+            currentCodeState.js = data.javascript;
+        }
+        
+        updatePreview();
+        
+        // Save to conversation
+        if (currentConversationId) {
+            const currentConv = conversations.find(c => c.id === currentConversationId);
+            if (currentConv) {
+                currentConv.code = {
+                    html: htmlCode.value,
+                    css: cssCode.value,
+                    js: jsCode.value
+                };
+                saveConversations();
+            }
+        }
+        
+        const explanation = data.explanation || "I've updated the code based on your selected areas.";
+        addMessage('assistant', explanation);
+        
+        // Save user message with selection context to conversation history
+        saveMessageToConversation(userDisplayMessage, explanation);
+        
+    } catch (error) {
+        removeLoading();
+        addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+        console.error('Error:', error);
+    }
+});
+
+
+
+// ========== FILE/IMAGE ATTACHMENT ==========
+const attachFileBtn = document.getElementById('attachFileBtn');
+const fileInput = document.getElementById('fileInput');
+const attachmentSection = document.getElementById('attachmentSection');
+const attachmentPreview = document.getElementById('attachmentPreview');
+const removeAttachmentBtn = document.getElementById('removeAttachmentBtn');
+
+let currentAttachment = null; // {file, type, dataUrl, name, size}
+
+// Open file picker
+attachFileBtn.addEventListener('click', () => {
+    fileInput.click();
+});
+
+// Handle file selection
+fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        fileInput.value = '';
+        return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+        alert('File size must be less than 10MB');
+        fileInput.value = '';
+        return;
+    }
+
+    // Convert to base64
+    try {
+        const dataUrl = await fileToBase64(file);
+        
+        currentAttachment = {
+            file: file,
+            type: file.type,
+            dataUrl: dataUrl,
+            name: file.name,
+            size: formatFileSize(file.size)
+        };
+
+        showAttachmentPreview();
+    } catch (error) {
+        console.error('Error reading file:', error);
+        alert('Error reading file. Please try again.');
+    }
+
+    // Reset file input
+    fileInput.value = '';
+});
+
+// Convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Show attachment preview
+function showAttachmentPreview() {
+    attachmentPreview.innerHTML = `
+        <img src="${currentAttachment.dataUrl}" alt="Preview">
+        <div class="file-info">
+            <div class="file-name">${currentAttachment.name}</div>
+            <div class="file-size">${currentAttachment.size}</div>
+        </div>
+    `;
+    attachmentSection.style.display = 'flex';
+}
+
+// Remove attachment
+removeAttachmentBtn.addEventListener('click', () => {
+    currentAttachment = null;
+    attachmentSection.style.display = 'none';
+    attachmentPreview.innerHTML = '';
+});
+
+// Update addMessage to show attachment indicator
+function addMessage(role, content, attachment = null) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${role}`;
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    if (role === 'assistant') {
+        const header = document.createElement('div');
+        header.className = 'message-header';
+        header.textContent = 'AI Assistant';
+        contentDiv.appendChild(header);
+    }
+
+    const textNode = document.createTextNode(content);
+    contentDiv.appendChild(textNode);
+
+    // Add attachment indicator if present
+    if (attachment && role === 'user') {
+        const attachmentDiv = document.createElement('div');
+        attachmentDiv.className = 'attachment-indicator';
+        attachmentDiv.innerHTML = `
+            <img src="${attachment.dataUrl}" alt="Attachment">
+            <span>📎 ${attachment.name}</span>
+        `;
+        contentDiv.appendChild(attachmentDiv);
+    }
+
+    messageDiv.appendChild(contentDiv);
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    return messageDiv;
+}
