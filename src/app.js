@@ -12,6 +12,7 @@ const newConversationBtn = document.getElementById('newConversationBtn');
 const newPageBtn = document.getElementById('newPageBtn');
 const resetBtn = document.getElementById('resetBtn');
 const conversationList = document.getElementById('conversationList');
+const pageList = document.getElementById('pageList');
 const modelItems = document.querySelectorAll('.model-item');
 
 // Sidebar and resizers
@@ -22,67 +23,478 @@ const resizerRight = document.getElementById('resizerRight');
 const resizerBottom = document.getElementById('resizerBottom');
 
 // ========== STATE ==========
-// ========== STATE ==========
 let currentModel = 'gpt4';
 let conversations = [];
 let pages = [];
 let currentConversationId = null;
 let currentPageId = null;
+let currentAttachment = null;
 
-// Code History State
-let currentCodeState = { html: '', css: '', js: '' };
-let previousCodeState = { html: '', css: '', js: '' };
-let isViewingPrevious = false;
-
-// Version Toggle Elements
-const btnCurrent = document.getElementById('btnCurrent');
-const btnPrevious = document.getElementById('btnPrevious');
-
-// Toggle Version
-function toggleVersion(viewPrevious) {
-    if (viewPrevious === isViewingPrevious) return;
-
-    // Save current state of editor before switching (in case of manual edits)
-    if (!isViewingPrevious) {
-        currentCodeState = {
-            html: htmlCode.value,
-            css: cssCode.value,
-            js: jsCode.value
-        };
-    }
-
-    isViewingPrevious = viewPrevious;
-
-    // Update UI
-    if (isViewingPrevious) {
-        btnPrevious.classList.add('active');
-        btnCurrent.classList.remove('active');
-
-        // Load previous code
-        htmlCode.value = previousCodeState.html || '';
-        cssCode.value = previousCodeState.css || '';
-        jsCode.value = previousCodeState.js || '';
-
-        // Add visual indicator (optional)
-        document.querySelector('.preview-panel .panel-header').style.background = 'linear-gradient(135deg, #718096 0%, #4a5568 100%)';
-    } else {
-        btnCurrent.classList.add('active');
-        btnPrevious.classList.remove('active');
-
-        // Load current code
-        htmlCode.value = currentCodeState.html || '';
-        cssCode.value = currentCodeState.css || '';
-        jsCode.value = currentCodeState.js || '';
-
-        // Restore header color
-        document.querySelector('.preview-panel .panel-header').style.background = '';
-    }
-
-    updatePreview();
+// Template Mock Data
+const templateComponents = [
+    {
+        id: 'template-hero-1',
+        title: 'Hero Section - Modern',
+        category: 'Hero',
+        code: {
+            html: `<section class="hero-modern">
+    <div class="hero-content">
+        <h1 class="hero-title">Build Something Amazing</h1>
+        <p class="hero-subtitle">Create stunning websites with our powerful tools and intuitive interface</p>
+        <div class="hero-buttons">
+            <button class="btn-primary">Get Started</button>
+            <button class="btn-secondary">Learn More</button>
+        </div>
+    </div>
+</section>`,
+            css: `.hero-modern {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 120px 20px;
+    text-align: center;
+    color: white;
 }
 
-btnCurrent.addEventListener('click', () => toggleVersion(false));
-btnPrevious.addEventListener('click', () => toggleVersion(true));
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero-title {
+    font-size: 56px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    font-size: 20px;
+    opacity: 0.9;
+    margin-bottom: 32px;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: white;
+    color: #667eea;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255,255,255,0.3);
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid white;
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.3);
+}`,
+            js: `document.querySelectorAll('.hero-buttons button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        console.log('Button clicked:', btn.textContent);
+    });
+});`
+        }
+    },
+    {
+        id: 'template-card-1',
+        title: 'Feature Cards - 3 Column',
+        category: 'Cards',
+        code: {
+            html: `<section class="features-section">
+    <div class="container">
+        <h2 class="section-title">Our Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>Fast Performance</h3>
+                <p>Lightning-fast load times and optimized code for the best user experience</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Beautiful Design</h3>
+                <p>Stunning visuals and modern aesthetics that captivate your audience</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Secure & Safe</h3>
+                <p>Enterprise-grade security to keep your data protected at all times</p>
+            </div>
+        </div>
+    </div>
+</section>`,
+            css: `.features-section {
+    padding: 80px 20px;
+    background: #f9fafb;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 60px;
+    color: #1f2937;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+}
+
+.feature-card {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+
+.feature-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.feature-card h3 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #1f2937;
+}
+
+.feature-card p {
+    color: #6b7280;
+    line-height: 1.6;
+}`,
+            js: `const cards = document.querySelectorAll('.feature-card');
+cards.forEach(card => {
+    card.addEventListener('mouseenter', () => {
+        card.style.borderLeft = '4px solid #667eea';
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.borderLeft = 'none';
+    });
+});`
+        }
+    },
+    {
+        id: 'template-navbar-1',
+        title: 'Navigation Bar - Transparent',
+        category: 'Navigation',
+        code: {
+            html: `<nav class="navbar">
+    <div class="nav-container">
+        <div class="nav-logo">
+            <span class="logo-icon">🎯</span>
+            <span class="logo-text">BrandName</span>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+        <button class="nav-cta">Sign Up</button>
+    </div>
+</nav>`,
+            css: `.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.logo-icon {
+    font-size: 28px;
+}
+
+.nav-menu {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+    margin: 0;
+}
+
+.nav-menu a {
+    text-decoration: none;
+    color: #4b5563;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-menu a:hover {
+    color: #667eea;
+}
+
+.nav-cta {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.nav-cta:hover {
+    transform: translateY(-2px);
+}`,
+            js: `window.addEventListener('scroll', () => {
+    const navbar = document.querySelector('.navbar');
+    if (window.scrollY > 50) {
+        navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+    } else {
+        navbar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+    }
+});`
+        }
+    },
+    {
+        id: 'template-footer-1',
+        title: 'Footer - Multi Column',
+        category: 'Footer',
+        code: {
+            html: `<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-column">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="#">About Us</a></li>
+                <li><a href="#">Careers</a></li>
+                <li><a href="#">Press</a></li>
+            </ul>
+        </div>
+        <div class="footer-column">
+            <h4>Product</h4>
+            <ul>
+                <li><a href="#">Features</a></li>
+                <li><a href="#">Pricing</a></li>
+                <li><a href="#">Security</a></li>
+            </ul>
+        </div>
+        <div class="footer-column">
+            <h4>Support</h4>
+            <ul>
+                <li><a href="#">Help Center</a></li>
+                <li><a href="#">Contact</a></li>
+                <li><a href="#">Status</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2024 BrandName. All rights reserved.</p>
+    </div>
+</footer>`,
+            css: `.footer {
+    background: #1f2937;
+    color: white;
+    padding: 60px 20px 20px;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.footer-column h4 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: white;
+}
+
+.footer-column ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-column ul li {
+    margin-bottom: 12px;
+}
+
+.footer-column a {
+    color: #9ca3af;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-column a:hover {
+    color: white;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #374151;
+    color: #9ca3af;
+    font-size: 14px;
+}`,
+            js: ``
+        }
+    }
+];
+
+// Code History State (Undo/Redo)
+let codeHistory = [];
+let historyIndex = -1;
+const MAX_HISTORY = 50;
+
+// Version Toggle Elements
+const btnUndo = document.getElementById('btnPrevious');
+const btnRedo = document.getElementById('btnCurrent');
+
+// Rename buttons
+if (btnUndo) btnUndo.textContent = 'Undo';
+if (btnRedo) btnRedo.textContent = 'Redo';
+
+// Save current state to history
+function saveToHistory() {
+    const currentState = {
+        html: htmlCode.value,
+        css: cssCode.value,
+        js: jsCode.value,
+        timestamp: Date.now()
+    };
+    
+    // Remove any forward history when making a new change
+    if (historyIndex < codeHistory.length - 1) {
+        codeHistory = codeHistory.slice(0, historyIndex + 1);
+    }
+    
+    // Add new state
+    codeHistory.push(currentState);
+    
+    // Limit history size
+    if (codeHistory.length > MAX_HISTORY) {
+        codeHistory.shift();
+    } else {
+        historyIndex++;
+    }
+    
+    updateHistoryButtons();
+}
+
+// Undo function
+function undo() {
+    if (historyIndex > 0) {
+        historyIndex--;
+        const state = codeHistory[historyIndex];
+        
+        htmlCode.value = state.html;
+        cssCode.value = state.css;
+        jsCode.value = state.js;
+        
+        updatePreview();
+        updateHistoryButtons();
+        
+        // Save to conversation
+        if (currentConversationId) {
+            const conv = conversations.find(c => c.id === currentConversationId);
+            if (conv) {
+                conv.code = { html: state.html, css: state.css, js: state.js };
+                saveConversations();
+            }
+        }
+    }
+}
+
+// Redo function
+function redo() {
+    if (historyIndex < codeHistory.length - 1) {
+        historyIndex++;
+        const state = codeHistory[historyIndex];
+        
+        htmlCode.value = state.html;
+        cssCode.value = state.css;
+        jsCode.value = state.js;
+        
+        updatePreview();
+        updateHistoryButtons();
+        
+        // Save to conversation
+        if (currentConversationId) {
+            const conv = conversations.find(c => c.id === currentConversationId);
+            if (conv) {
+                conv.code = { html: state.html, css: state.css, js: state.js };
+                saveConversations();
+            }
+        }
+    }
+}
+
+// Update button states
+function updateHistoryButtons() {
+    if (btnUndo) {
+        btnUndo.disabled = historyIndex <= 0;
+        btnUndo.style.opacity = historyIndex <= 0 ? '0.5' : '1';
+        btnUndo.style.cursor = historyIndex <= 0 ? 'not-allowed' : 'pointer';
+    }
+    
+    if (btnRedo) {
+        btnRedo.disabled = historyIndex >= codeHistory.length - 1;
+        btnRedo.style.opacity = historyIndex >= codeHistory.length - 1 ? '0.5' : '1';
+        btnRedo.style.cursor = historyIndex >= codeHistory.length - 1 ? 'not-allowed' : 'pointer';
+    }
+}
+
+// Bind buttons
+if (btnUndo) btnUndo.addEventListener('click', undo);
+if (btnRedo) btnRedo.addEventListener('click', redo);
 
 // ========== SIDEBAR TOGGLE ==========
 let sidebarCollapsed = false;
@@ -91,15 +503,12 @@ toggleSidebarBtn.addEventListener('click', () => {
     sidebarCollapsed = !sidebarCollapsed;
     sidebar.classList.toggle('collapsed');
 
-    // Update CSS variable for grid layout
     const newWidth = sidebarCollapsed ? '48px' : '240px';
     document.documentElement.style.setProperty('--sidebar-width', newWidth);
 
-    // Save state
     localStorage.setItem('sidebar-collapsed', sidebarCollapsed);
 });
 
-// Load sidebar state
 const savedSidebarState = localStorage.getItem('sidebar-collapsed');
 if (savedSidebarState === 'true') {
     sidebarCollapsed = true;
@@ -108,8 +517,6 @@ if (savedSidebarState === 'true') {
 }
 
 // ========== PANEL RESIZING ==========
-
-// Left sidebar resizer
 let isResizingLeft = false;
 let startXLeft = 0;
 let startWidthLeft = 0;
@@ -122,7 +529,6 @@ resizerLeft.addEventListener('mousedown', (e) => {
     document.body.style.userSelect = 'none';
 });
 
-// Right panel resizer
 let isResizingRight = false;
 let startXRight = 0;
 let startWidthRight = 0;
@@ -136,7 +542,6 @@ resizerRight.addEventListener('mousedown', (e) => {
     document.body.style.userSelect = 'none';
 });
 
-// Bottom chat panel resizer
 let isResizingBottom = false;
 let startYBottom = 0;
 let startHeightBottom = 0;
@@ -150,7 +555,6 @@ resizerBottom.addEventListener('mousedown', (e) => {
     document.body.style.userSelect = 'none';
 });
 
-// Global mouse move handler
 document.addEventListener('mousemove', (e) => {
     if (isResizingLeft) {
         const deltaX = e.clientX - startXLeft;
@@ -171,13 +575,11 @@ document.addEventListener('mousemove', (e) => {
     }
 });
 
-// Global mouse up handler
 document.addEventListener('mouseup', () => {
     if (isResizingLeft || isResizingRight || isResizingBottom) {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
 
-        // Save panel sizes
         if (isResizingLeft) {
             const sidebarWidth = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
             localStorage.setItem('sidebar-width', sidebarWidth);
@@ -197,7 +599,6 @@ document.addEventListener('mouseup', () => {
     isResizingBottom = false;
 });
 
-// Load saved panel sizes
 const savedSidebarWidth = localStorage.getItem('sidebar-width');
 const savedEditorWidth = localStorage.getItem('editor-width');
 const savedChatHeight = localStorage.getItem('chat-height');
@@ -213,18 +614,13 @@ if (savedChatHeight) {
 }
 
 // ========== CODE EDITOR FUNCTIONALITY ==========
-
-// Tab Switching
 tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-        // Remove active class from all tabs and editors
         tabs.forEach(t => t.classList.remove('active'));
         editors.forEach(e => e.classList.remove('active'));
 
-        // Add active class to clicked tab
         tab.classList.add('active');
 
-        // Show corresponding editor
         const lang = tab.dataset.lang;
         document.getElementById(`${lang}Editor`).classList.add('active');
     });
@@ -238,7 +634,6 @@ const pasteInput = document.getElementById('pasteInput');
 const cancelPasteBtn = document.getElementById('cancelPasteBtn');
 const importPasteBtn = document.getElementById('importPasteBtn');
 
-// Copy Full Code
 copyFullBtn.addEventListener('click', () => {
     const html = htmlCode.value;
     const css = cssCode.value;
@@ -273,7 +668,6 @@ ${js}
     });
 });
 
-// Paste Functionality
 pasteFullBtn.addEventListener('click', () => {
     pasteInput.value = '';
     pasteModal.showModal();
@@ -287,7 +681,7 @@ importPasteBtn.addEventListener('click', () => {
     const fullCode = pasteInput.value;
     if (parseAndLoadCode(fullCode)) {
         pasteModal.close();
-        // Save state immediately after import if we are in a conversation
+        saveToHistory();
         if (currentConversationId) {
             const currentConv = conversations.find(c => c.id === currentConversationId);
             if (currentConv) {
@@ -302,23 +696,14 @@ importPasteBtn.addEventListener('click', () => {
     }
 });
 
-// Helper to parse HTML string and populate editors
 function parseAndLoadCode(fullCode) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(fullCode, 'text/html');
 
-        // Extract CSS
-        // Join multiple style tags if present
         const styles = Array.from(doc.querySelectorAll('style')).map(s => s.innerHTML).join('\n\n');
-
-        // Extract JS
-        // Join multiple script tags if present
         const scripts = Array.from(doc.querySelectorAll('script')).map(s => s.innerHTML).join('\n\n');
 
-        // Extract HTML Body (excluding script tags from body if possible, though parser moves them? 
-        // DOMParser usually puts scripts in body or head depending on placement. 
-        // We'll clone body and remove scripts/styles to get pure html)
         const bodyClone = doc.body.cloneNode(true);
         const bodyScripts = bodyClone.querySelectorAll('script');
         bodyScripts.forEach(s => s.remove());
@@ -326,11 +711,8 @@ function parseAndLoadCode(fullCode) {
         bodyStyles.forEach(s => s.remove());
 
         let bodyContent = bodyClone.innerHTML;
-
-        // Trim whitespace
         bodyContent = bodyContent.replace(/^\s*\n/gm, '').trim();
 
-        // Update Editors
         htmlCode.value = bodyContent;
         cssCode.value = styles.trim();
         jsCode.value = scripts.trim();
@@ -344,15 +726,11 @@ function parseAndLoadCode(fullCode) {
     }
 }
 
-
-// Live Preview Update
 function updatePreview() {
     const html = htmlCode.value;
     const css = cssCode.value;
     const js = jsCode.value;
 
-    // Create complete HTML document
-    // NOTE: Editor now contains BODY content only, so we wrap it here
     const completeHTML = `
         <!DOCTYPE html>
         <html lang="en">
@@ -374,17 +752,25 @@ function updatePreview() {
         </html>
     `;
 
-    // Update iframe
     const blob = new Blob([completeHTML], { type: 'text/html' });
     previewFrame.src = URL.createObjectURL(blob);
 }
 
-// Listen for code changes
-htmlCode.addEventListener('input', debounce(updatePreview, 500));
-cssCode.addEventListener('input', debounce(updatePreview, 500));
-jsCode.addEventListener('input', debounce(updatePreview, 500));
+htmlCode.addEventListener('input', debounce(() => {
+    saveToHistory();
+    updatePreview();
+}, 1000));
 
-// Debounce function to prevent excessive updates
+cssCode.addEventListener('input', debounce(() => {
+    saveToHistory();
+    updatePreview();
+}, 1000));
+
+jsCode.addEventListener('input', debounce(() => {
+    saveToHistory();
+    updatePreview();
+}, 1000));
+
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -397,13 +783,10 @@ function debounce(func, wait) {
     };
 }
 
-// Initial preview
 updatePreview();
 
 // ========== CHAT FUNCTIONALITY ==========
-
-// Add message to chat
-function addMessage(role, content) {
+function addMessage(role, content, attachment = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
@@ -420,6 +803,16 @@ function addMessage(role, content) {
     const textNode = document.createTextNode(content);
     contentDiv.appendChild(textNode);
 
+    if (attachment && role === 'user') {
+        const attachmentDiv = document.createElement('div');
+        attachmentDiv.className = 'attachment-indicator';
+        attachmentDiv.innerHTML = `
+            <img src="${attachment.dataUrl}" alt="Attachment">
+            <span>📎 ${attachment.name}</span>
+        `;
+        contentDiv.appendChild(attachmentDiv);
+    }
+
     messageDiv.appendChild(contentDiv);
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -427,7 +820,6 @@ function addMessage(role, content) {
     return messageDiv;
 }
 
-// Show loading indicator
 function showLoading() {
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message assistant';
@@ -450,7 +842,6 @@ function showLoading() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Remove loading indicator
 function removeLoading() {
     const loadingMsg = document.getElementById('loadingMessage');
     if (loadingMsg) {
@@ -458,7 +849,6 @@ function removeLoading() {
     }
 }
 
-// Get AI Response
 async function getAIResponse(userMessage, imageData = null) {
     const html = htmlCode.value;
     const css = cssCode.value;
@@ -491,150 +881,41 @@ async function getAIResponse(userMessage, imageData = null) {
     }
 }
 
-// Send message
-// async function sendMessage() {
-//     const message = messageInput.value.trim();
-    
-//     // Allow sending if there's a message OR an attachment
-//     if (!message && !currentAttachment) return;
-
-//     // Store attachment reference before clearing
-//     const attachmentToSend = currentAttachment;
-
-//     // Add user message to UI
-//     addMessage('user', message || '(Image attached)', attachmentToSend);
-//     messageInput.value = '';
-    
-//     // Clear attachment UI
-//     if (currentAttachment) {
-//         currentAttachment = null;
-//         attachmentSection.style.display = 'none';
-//         attachmentPreview.innerHTML = '';
-//     }
-
-//     // Show loading
-//     showLoading();
-
-//     try {
-//         // SNAPSHOT: Save current code state before AI update
-//         if (!isViewingPrevious) {
-//             previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
-//             currentCodeState = { ...previousCodeState };
-//         } else {
-//             toggleVersion(false);
-//             previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
-//         }
-        
-//         // Get AI response with image
-//         const imageData = attachmentToSend ? attachmentToSend.dataUrl : null;
-//         const data = await getAIResponse(message || 'Please analyze this image and update the code accordingly', imageData);
-
-//         // Remove loading
-//         removeLoading();
-
-//         // Update Editors with new code
-//         if (data.html) {
-//             htmlCode.value = data.html;
-//             currentCodeState.html = data.html;
-//         }
-//         if (data.css) {
-//             cssCode.value = data.css;
-//             currentCodeState.css = data.css;
-//         }
-//         if (data.javascript) {
-//             jsCode.value = data.javascript;
-//             currentCodeState.js = data.javascript;
-//         }
-
-//         // Trigger preview update
-//         updatePreview();
-
-//         // PERSISTENCE: Save updated code to conversation
-//         if (currentConversationId) {
-//             const currentConv = conversations.find(c => c.id === currentConversationId);
-//             if (currentConv) {
-//                 currentConv.code = {
-//                     html: htmlCode.value,
-//                     css: cssCode.value,
-//                     js: jsCode.value
-//                 };
-//                 saveConversations();
-//             }
-//         }
-
-//         // Add AI explanation to chat
-//         const explanation = data.explanation || "I've updated the code based on your request.";
-//         addMessage('assistant', explanation);
-
-//         // Save to conversation (save the message with attachment info)
-//         const userMessageContent = message || '(Image attached)';
-//         saveMessageToConversation(userMessageContent, explanation);
-
-//     } catch (error) {
-//         removeLoading();
-//         addMessage('assistant', 'Sorry, I encountered an error communicating with the server. Please make sure the backend is running and your API key is set.');
-//         console.error('Error:', error);
-//     }
-// }
-// Send message
 async function sendMessage() {
     const message = messageInput.value.trim();
     
-    // Allow sending if there's a message OR an attachment
     if (!message && !currentAttachment) return;
 
-    // Store attachment reference before clearing
     const attachmentToSend = currentAttachment;
 
-    // Add user message to UI
     addMessage('user', message || '(Image attached)', attachmentToSend);
     messageInput.value = '';
     
-    // Clear attachment UI
     if (currentAttachment) {
         currentAttachment = null;
+        const attachmentSection = document.getElementById('attachmentSection');
+        const attachmentPreview = document.getElementById('attachmentPreview');
         attachmentSection.style.display = 'none';
         attachmentPreview.innerHTML = '';
     }
 
-    // Show loading
     showLoading();
 
     try {
-        // SNAPSHOT: Save current code state before AI update
-        if (!isViewingPrevious) {
-            previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
-            currentCodeState = { ...previousCodeState };
-        } else {
-            toggleVersion(false);
-            previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
-        }
+        saveToHistory();
         
-        // Get AI response with image
         const imageData = attachmentToSend ? attachmentToSend.dataUrl : null;
         const data = await getAIResponse(message || 'Please analyze this image and update the code accordingly', imageData);
 
-        // Remove loading
         removeLoading();
 
-        // Update Editors with new code
-        if (data.html) {
-            htmlCode.value = data.html;
-            currentCodeState.html = data.html;
-        }
-        if (data.css) {
-            cssCode.value = data.css;
-            currentCodeState.css = data.css;
-        }
-        if (data.javascript) {
-            jsCode.value = data.javascript;
-            currentCodeState.js = data.javascript;
-        }
+        if (data.html) htmlCode.value = data.html;
+        if (data.css) cssCode.value = data.css;
+        if (data.javascript) jsCode.value = data.javascript;
 
-        // Trigger preview update
+        saveToHistory();
         updatePreview();
 
-        // PERSISTENCE: Save updated code to conversation
         if (currentConversationId) {
             const currentConv = conversations.find(c => c.id === currentConversationId);
             if (currentConv) {
@@ -647,11 +928,9 @@ async function sendMessage() {
             }
         }
 
-        // Add AI explanation to chat
         const explanation = data.explanation || "I've updated the code based on your request.";
         addMessage('assistant', explanation);
 
-        // Save to conversation (save the message with attachment info)
         const userMessageContent = message || '(Image attached)';
         saveMessageToConversation(userMessageContent, explanation);
 
@@ -662,1291 +941,15 @@ async function sendMessage() {
     }
 }
 
-
-// Send button click
 sendBtn.addEventListener('click', sendMessage);
 
-// Enter key to send (updated to handle attachments)
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        // Allow sending if there's text or attachment
         if (messageInput.value.trim() || currentAttachment) {
             sendMessage();
         }
     }
-});
-
-// ========== PAGE MANAGEMENT ==========
-
-// Initialize page
-function initializePage() {
-    const pageId = Date.now().toString();
-    currentPageId = pageId;
-
-    const page = {
-        id: pageId,
-        title: 'New Page',
-        date: new Date().toISOString(),
-        conversationIds: [],
-    };
-
-    pages.unshift(page); //??
-    savePages();
-    return page;
-}
-
-// ... renamePages and deletePages functions remain same ... (skipping to loadPages logic)
-
-// Load a page
-function loadPages(pageId) {
-    // Save current editor state to CURRENT page before switching
-    if (currentPageId) {
-        const currentPage = pages.find(p => p.id === currentPageId);
-        if (currentPage) {
-            currentPage.component = {
-                // html: htmlCode.value,
-                // css: cssCode.value,
-                // js: jsCode.value
-            };
-            savePages();
-        }
-    }
-
-    const page = pages.find(c => c.id === pageId);
-    if (!page) return;
-
-    currentPageId = pageId;
-
-    // Filter allConversations to get only the ones listed in this page
-    const pageConversations = allConversations.filter(conv => 
-        page.conversationIds.includes(conv.id)
-    );
-
-    // Update Page Preview
-    updatePagePreview();
-    // Update UI
-    updatePageList();
-}
-
-function renamePages(pageId, newTitle) {
-    if (!pageId || !newTitle?.trim()) return false;
-
-    const page = pages.find(p => p.id === pageId);
-    if (!page) return false;
-
-    page.title = newTitle.trim();
-    savePages();
-    updatePageList();
-    return true;
-}
-
-function deletePage(pageId) {
-    const index = pages.findIndex(p => p.id === pageId);
-    if (index === -1) return false;
-
-    pages.splice(index, 1);
-    // Reset current page if deleted
-    if (currentPageId === pageId) {
-        currentPageId = pages[0]?.id || null;
-        if (currentPageId) {
-            loadPages(currentPageId);
-        } else {
-            // ?? Clear editors if no pages left
-        }
-    }
-
-    savePages();
-    updatePageList();
-    return true;
-}
-
-// Save component to current page
-function saveComponentToPage(userMessage, aiResponse) {
-    if (!currentPageId) {
-        initializePage();
-    }
-
-    const page = pages.find(p => p.id === currentPageId);
-    if (page) {
-        conversation.messages.push({
-            role: 'user',
-            content: userMessage,
-            timestamp: new Date().toISOString()
-        });
-        conversation.messages.push({
-            role: 'assistant',
-            content: aiResponse,
-            timestamp: new Date().toISOString()
-        });
-
-        // Update title based on first message
-        if (conversation.messages.length === 2) {
-            conversation.title = userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : '');
-        }
-
-        savePages();
-        updatePageList();
-    }
-}
-
-// Save pages to localStorage
-function savePages() {
-    localStorage.setItem('webdev_pages', JSON.stringify(pages));
-}
-
-// Load pages from localStorage
-function loadPages() {
-    const saved = localStorage.getItem('webdev_pages');
-    if (saved) {
-        pages = JSON.parse(saved);
-    }
-}
-
-function loadPage(pageId) {
-    const page = pages.find(p => p.id === pageId);
-    if (!page) return;
-
-    currentPageId = pageId;
-
-}
-
-
-// Update page list UI
-function updatePageList() {
-
-    //clear existing list
-    pageList.innerHTML = '';
-
-    pages.forEach(page => {
-        const item = document.createElement('div');
-        item.className = 'page-item';
-        if (page.id === currentPageId) {
-            item.classList.add('active');
-        }
-
-        // Title and Date container
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'page-info';
-
-        const title = document.createElement('div');
-        title.className = 'page-title';
-        title.textContent = page.title;
-
-        const date = document.createElement('div');
-        date.className = 'page-date';
-        date.textContent = formatDate(page.date);
-
-        infoDiv.appendChild(title);
-        infoDiv.appendChild(date);
-
-        // Actions container
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'conversation-actions';
-
-        const renameBtn = document.createElement('button');
-        renameBtn.className = 'action-btn rename-btn';
-        renameBtn.innerHTML = '✏️';
-        renameBtn.title = 'Rename';
-        renameBtn.onclick = (e) => {
-            e.stopPropagation();
-            const newTitle = prompt('Enter new title:', page.title);
-            if (newTitle) renamePage(page.id, newTitle);
-        };
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'action-btn delete-btn';
-        deleteBtn.innerHTML = '🗑️';
-        deleteBtn.title = 'Delete';
-        deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            deletePage(page.id);
-        };
-
-        actionsDiv.appendChild(renameBtn);
-        actionsDiv.appendChild(deleteBtn);
-
-        item.appendChild(infoDiv);
-        item.appendChild(actionsDiv);
-
-        item.addEventListener('click', () => loadPage(page.id));
-
-        pageList.appendChild(item);
-    });
-}
-
-// New page
-newPageBtn.addEventListener('click', () => {
-    initializePage();
-    updatePageList();
-});
-
-// Open page
-function openPage(pageId) {
-    
-}
-
-function mergePageCode(pageId) {
-    const page = pages.find(p => p.id === pageId);
-    
-    // Reduce all linked conversations into one combined code object
-    return page.conversationIds.reduce((acc, convId) => {
-        const conv = allConversations.find(c => c.id === convId);
-        if (conv) {
-            acc.html += conv.code.html + "\n";
-            acc.css += conv.code.css + "\n";
-            acc.js += conv.code.js + "\n";
-        }
-        return acc;
-    }, { html: "", css: "", js: "" });
-}
-
-
-// ========== CONVERSATION MANAGEMENT ==========
-
-// Initialize conversation
-function initializeConversation() {
-    const conversationId = Date.now().toString();
-    currentConversationId = conversationId;
-
-    const conversation = {
-        id: conversationId,
-        title: 'New Conversation',
-        date: new Date().toISOString(),
-        messages: [],
-        model: currentModel,
-        // Initial code state
-        code: {
-            html: `<div class="container">
-    <h1>Welcome to Web Dev Playground</h1>
-    <p>Start coding and see live results!</p>
-</div>`,
-            css: cssCode.value,
-            js: jsCode.value
-        }
-    };
-
-    conversations.unshift(conversation);
-    saveConversations();
-    return conversation;
-}
-
-// ... renameConversation and deleteConversation functions remain same ... (skipping to loadConversation logic)
-
-// Load a conversation
-function loadConversation(conversationId) {
-
-
-    // Save current editor state to CURRENT conversation before switching
-    if (currentConversationId) {
-        const currentConv = conversations.find(c => c.id === currentConversationId);
-        if (currentConv) {
-            currentConv.code = {
-                html: htmlCode.value,
-                css: cssCode.value,
-                js: jsCode.value
-            };
-            saveConversations();
-        }
-    }
-
-    const conversation = conversations.find(c => c.id === conversationId);
-    if (!conversation) return;
-
-    currentConversationId = conversationId;
-
-    // Reset UI for new chat context
-    chatMessages.innerHTML = '';
-
-    // Restore Code from this conversation (or default if missing)
-    if (conversation.code) {
-        htmlCode.value = conversation.code.html || '';
-        cssCode.value = conversation.code.css || '';
-        jsCode.value = conversation.code.js || '';
-
-        // Update trackers
-        currentCodeState = { ...conversation.code };
-        // Reset previous code state since we switched context
-        previousCodeState = { ...conversation.code };
-        isViewingPrevious = false;
-
-        // Reset toggle UI
-        btnCurrent.classList.add('active');
-        btnPrevious.classList.remove('active');
-        document.querySelector('.preview-panel .panel-header').style.background = '';
-    } else {
-        // Legacy conversation with no saved code - keep current or clear?
-        // Let's clear to avoid confusion, or keep current as "fork"? 
-        // Best UX: Don't change editors if no data, BUT warn user? 
-        // actually, let's just initialize it with current values so it starts tracking from here
-        conversation.code = {
-            html: htmlCode.value,
-            css: cssCode.value,
-            js: jsCode.value
-        };
-    }
-
-    // Update Preview
-    updatePreview();
-
-    // Add welcome message
-    addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
-
-    // Load messages
-    conversation.messages.forEach(msg => {
-        addMessage(msg.role, msg.content);
-    });
-
-    // Update UI
-    updateConversationList();
-}
-
-function renameConversation(conversationId, newTitle) {
-    if (!conversationId || !newTitle?.trim()) return false;
-
-    const conversation = conversations.find(c => c.id === conversationId);
-    if (!conversation) return false;
-
-    conversation.title = newTitle.trim();
-    saveConversations();
-    updateConversationList();
-    return true;
-}
-
-function deleteConversation(conversationId) {
-    const index = conversations.findIndex(c => c.id === conversationId);
-    if (index === -1) return false;
-
-    conversations.splice(index, 1);
-
-    // Reset current conversation if deleted
-    if (currentConversationId === conversationId) {
-        currentConversationId = conversations[0]?.id || null;
-        if (currentConversationId) {
-            loadConversation(currentConversationId);
-        } else {
-            // No conversations left
-            chatMessages.innerHTML = '';
-            addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
-        }
-    }
-
-    saveConversations();
-    updateConversationList();
-    return true;
-}
-
-// Save message to current conversation
-function saveMessageToConversation(userMessage, aiResponse) {
-    if (!currentConversationId) {
-        initializeConversation();
-    }
-
-    const conversation = conversations.find(c => c.id === currentConversationId);
-    if (conversation) {
-        conversation.messages.push({
-            role: 'user',
-            content: userMessage,
-            timestamp: new Date().toISOString()
-        });
-        conversation.messages.push({
-            role: 'assistant',
-            content: aiResponse,
-            timestamp: new Date().toISOString()
-        });
-
-        // Update title based on first message
-        if (conversation.messages.length === 2) {
-            conversation.title = userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : '');
-        }
-
-        saveConversations();
-        updateConversationList();
-    }
-}
-
-// Save conversations to localStorage
-function saveConversations() {
-    localStorage.setItem('webdev_conversations', JSON.stringify(conversations));
-}
-
-// Load conversations from localStorage
-function loadConversations() {
-    const saved = localStorage.getItem('webdev_conversations');
-    if (saved) {
-        conversations = JSON.parse(saved);
-    }
-}
-
-// Update conversation list UI
-function updateConversationList() {
-    conversationList.innerHTML = '';
-
-    conversations.forEach(conv => {
-        const item = document.createElement('div');
-        item.className = 'conversation-item';
-        if (conv.id === currentConversationId) {
-            item.classList.add('active');
-        }
-
-        // Title and Date container
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'conversation-info';
-
-        const title = document.createElement('div');
-        title.className = 'conversation-title';
-        title.textContent = conv.title;
-
-        const date = document.createElement('div');
-        date.className = 'conversation-date';
-        date.textContent = formatDate(conv.date);
-
-        infoDiv.appendChild(title);
-        infoDiv.appendChild(date);
-
-        // Actions container
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'conversation-actions';
-
-        const renameBtn = document.createElement('button');
-        renameBtn.className = 'action-btn rename-btn';
-        renameBtn.innerHTML = '✏️';
-        renameBtn.title = 'Rename';
-        renameBtn.onclick = (e) => {
-            e.stopPropagation();
-            const newTitle = prompt('Enter new title:', conv.title);
-            if (newTitle) renameConversation(conv.id, newTitle);
-        };
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'action-btn delete-btn';
-        deleteBtn.innerHTML = '🗑️';
-        deleteBtn.title = 'Delete';
-        deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            deleteConversation(conv.id);
-        };
-
-        actionsDiv.appendChild(renameBtn);
-        actionsDiv.appendChild(deleteBtn);
-
-        item.appendChild(infoDiv);
-        item.appendChild(actionsDiv);
-
-        item.addEventListener('click', () => {
-            closePageDisplay();
-            loadConversation(conv.id)
-        });
-
-        conversationList.appendChild(item);
-    });
-}
-
-// Format date for display
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    return date.toLocaleDateString();
-}
-
-// New conversation
-newConversationBtn.addEventListener('click', () => {
-    initializeConversation();
-    chatMessages.innerHTML = '';
-    addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
-    updateConversationList();
-});
-
-// Reset conversation
-resetBtn.addEventListener('click', () => {
-    if (confirm('Are you sure you want to reset the current conversation?')) {
-        chatMessages.innerHTML = '';
-        addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
-
-        if (currentConversationId) {
-            const conversation = conversations.find(c => c.id === currentConversationId);
-            if (conversation) {
-                conversation.messages = [];
-                saveConversations();
-            }
-        }
-    }
-});
-
-// ========== MODEL SELECTION ==========
-modelItems.forEach(item => {
-    item.addEventListener('click', () => {
-        modelItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        currentModel = item.dataset.model;
-
-        const modelName = item.querySelector('.model-name').textContent;
-        addMessage('assistant', `Switched to ${modelName} model.`);
-    });
-});
-
-// ========== INITIALIZATION ==========
-loadConversations();
-if (conversations.length > 0) {
-    updateConversationList();
-} else {
-    initializeConversation();
-    updateConversationList();
-}
-
-// ========== KEYBOARD SHORTCUTS ==========
-document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + Enter to run code
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        updatePreview();
-    }
-
-    // Ctrl/Cmd + K to focus chat input
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        messageInput.focus();
-    }
-
-    // Ctrl/Cmd + B to toggle sidebar
-    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault();
-        toggleSidebarBtn.click();
-    }
-});
-
-console.log('🚀 Web Dev Playground initialized!');
-console.log('💡 Shortcuts: Ctrl+Enter (update preview) | Ctrl+K (focus chat) | Ctrl+B (toggle sidebar)');
-
-// ========== PAGE DISPLAY MANAGEMENT ==========
-const pageDisplayContent = document.getElementById('pageDisplayContent');
-const componentList = document.getElementById('componentList');
-const selectedComponents = document.getElementById('selectedComponents');
-const pagePreviewFrame = document.getElementById('pagePreviewFrame');
-const closePageBtn = document.getElementById('closePageBtn');
-
-// Changed: Now store objects with both convId and unique instanceId
-let currentPageComponents = []; // Array of {convId, instanceId}
-
-function openPageDisplay(pageId) {
-    const page = pages.find(p => p.id === pageId);
-    if (!page) return;
-
-    currentPageId = pageId;
-    
-    // Load saved components (convert old format if needed)
-    if (page.conversationIds) {
-        if (page.conversationIds.length > 0 && typeof page.conversationIds[0] === 'string') {
-            // Old format: just IDs - convert to new format
-            currentPageComponents = page.conversationIds.map(convId => ({
-                convId: convId,
-                instanceId: Date.now() + Math.random()
-            }));
-        } else {
-            // New format: objects with convId and instanceId
-            currentPageComponents = page.conversationIds || [];
-        }
-    } else {
-        currentPageComponents = [];
-    }
-
-    // Hide main panels
-    document.querySelector('.preview-panel').style.display = 'none';
-    document.querySelector('.editor-panel').style.display = 'none';
-    document.querySelector('.chat-panel').style.display = 'none';
-    document.querySelector('.resizer-right').style.display = 'none';
-    document.querySelector('.resizer-bottom').style.display = 'none';
-
-    // Show page display
-    pageDisplayContent.style.display = 'grid';
-    closePageBtn.style.display = 'flex';
-
-    // Load components
-    loadAvailableComponents();
-    updateSelectedComponentsUI();
-    updatePagePreview();
-}
-
-function closePageDisplay() {
-    // Save current page state
-    if (currentPageId) {
-        const page = pages.find(p => p.id === currentPageId);
-        if (page) {
-            page.conversationIds = currentPageComponents;
-            savePages();
-        }
-    }
-
-    // Show main panels
-    document.querySelector('.preview-panel').style.display = 'flex';
-    document.querySelector('.editor-panel').style.display = 'flex';
-    document.querySelector('.chat-panel').style.display = 'flex';
-    document.querySelector('.resizer-right').style.display = 'block';
-    document.querySelector('.resizer-bottom').style.display = 'block';
-
-    // Hide page display
-    pageDisplayContent.style.display = 'none';
-    closePageBtn.style.display = 'none';
-
-    currentPageId = null;
-    currentPageComponents = [];
-}
-
-function loadAvailableComponents() {
-    componentList.innerHTML = '';
-
-    if (conversations.length === 0) {
-        componentList.innerHTML = '<p style="color: #666; font-size: 12px;">No components available. Create conversations first.</p>';
-        return;
-    }
-
-    conversations.forEach(conv => {
-        const card = document.createElement('div');
-        card.className = 'component-card';
-        
-        // Count how many times this component is used
-        const usageCount = currentPageComponents.filter(c => c.convId === conv.id).length;
-        
-        card.innerHTML = `
-            <div class="component-card-header">
-                <h4>${conv.title} ${usageCount > 0 ? `(${usageCount})` : ''}</h4>
-                <button class="add-component-btn" data-conv-id="${conv.id}">
-                    + Add
-                </button>
-            </div>
-            <p>${conv.messages.length} messages • ${formatDate(conv.date)}</p>
-        `;
-
-        const addBtn = card.querySelector('.add-component-btn');
-        addBtn.addEventListener('click', () => addComponent(conv.id));
-
-        componentList.appendChild(card);
-    });
-}
-
-function addComponent(conversationId) {
-    // Create a new instance with unique ID
-    const newInstance = {
-        convId: conversationId,
-        instanceId: Date.now() + Math.random()
-    };
-    
-    currentPageComponents.push(newInstance);
-    loadAvailableComponents();
-    updateSelectedComponentsUI();
-    updatePagePreview();
-}
-
-function removeComponent(instanceId) {
-    const index = currentPageComponents.findIndex(c => c.instanceId === instanceId);
-    if (index > -1) {
-        currentPageComponents.splice(index, 1);
-    }
-    
-    loadAvailableComponents();
-    updateSelectedComponentsUI();
-    updatePagePreview();
-}
-
-// Drag and Drop State
-let draggedElement = null;
-let draggedIndex = null;
-
-function updateSelectedComponentsUI() {
-    selectedComponents.innerHTML = '';
-
-    if (currentPageComponents.length === 0) {
-        selectedComponents.innerHTML = '<p style="color: #666; margin: 0; font-size: 12px;">No components added yet</p>';
-        return;
-    }
-
-    currentPageComponents.forEach((component, index) => {
-        const conv = conversations.find(c => c.id === component.convId);
-        if (!conv) return;
-
-        const tag = document.createElement('div');
-        tag.className = 'selected-tag';
-        tag.draggable = true;
-        tag.dataset.instanceId = component.instanceId;
-        tag.dataset.index = index;
-        
-        tag.innerHTML = `
-            ${conv.title}
-            <button onclick="removeComponent(${component.instanceId})" title="Remove component">×</button>
-        `;
-
-        // Drag events
-        tag.addEventListener('dragstart', handleDragStart);
-        tag.addEventListener('dragend', handleDragEnd);
-        tag.addEventListener('dragover', handleDragOver);
-        tag.addEventListener('drop', handleDrop);
-        tag.addEventListener('dragenter', handleDragEnter);
-        tag.addEventListener('dragleave', handleDragLeave);
-
-        selectedComponents.appendChild(tag);
-    });
-}
-
-function handleDragStart(e) {
-    draggedElement = e.target;
-    draggedIndex = parseInt(e.target.dataset.index);
-    e.target.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target.innerHTML);
-}
-
-function handleDragEnd(e) {
-    e.target.classList.remove('dragging');
-    
-    // Remove all drag-over classes
-    document.querySelectorAll('.selected-tag').forEach(tag => {
-        tag.classList.remove('drag-over');
-    });
-    
-    draggedElement = null;
-    draggedIndex = null;
-}
-
-function handleDragOver(e) {
-    if (e.preventDefault) {
-        e.preventDefault();
-    }
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-}
-
-function handleDragEnter(e) {
-    if (e.target.classList.contains('selected-tag') && e.target !== draggedElement) {
-        e.target.classList.add('drag-over');
-    }
-}
-
-function handleDragLeave(e) {
-    if (e.target.classList.contains('selected-tag')) {
-        e.target.classList.remove('drag-over');
-    }
-}
-
-function handleDrop(e) {
-    if (e.stopPropagation) {
-        e.stopPropagation();
-    }
-    
-    e.target.classList.remove('drag-over');
-    
-    if (draggedElement !== e.target && e.target.classList.contains('selected-tag')) {
-        const dropIndex = parseInt(e.target.dataset.index);
-        
-        // Reorder array
-        const draggedItem = currentPageComponents[draggedIndex];
-        currentPageComponents.splice(draggedIndex, 1);
-        currentPageComponents.splice(dropIndex, 0, draggedItem);
-        
-        // Update UI
-        updateSelectedComponentsUI();
-        updatePagePreview();
-    }
-    
-    return false;
-}
-
-function updatePagePreview() {
-    const mergedCode = currentPageComponents.reduce((acc, component) => {
-        const conv = conversations.find(c => c.id === component.convId);
-        if (conv && conv.code) {
-            // Use instanceId to make each component unique
-            acc.html += `
-    <!-- Component: ${conv.title} (Instance: ${component.instanceId}) -->
-    <div class="component-section" data-component-id="${component.convId}" data-instance-id="${component.instanceId}">
-        <div class="component-header">
-            <h3>${conv.title}</h3>
-        </div>
-        <div class="component-content">
-            ${conv.code.html || ''}
-        </div>
-    </div>
-`;
-            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
-            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
-        }
-        return acc;
-    }, { html: '', css: '', js: '' });
-
-    // Add base styles for component layout
-    const baseStyles = `
-        /* Base Page Layout Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .component-section {
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 20px;
-        }
-        
-        .component-section:last-child {
-            border-bottom: none;
-        }
-        
-        .component-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .component-header h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .component-content {
-            flex: 1;
-        }
-    `;
-
-    const completeHTML = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                ${baseStyles}
-                ${mergedCode.css}
-            </style>
-        </head>
-        <body>
-            ${mergedCode.html}
-            <script>
-                try {
-                    ${mergedCode.js}
-                } catch (error) {
-                    console.error('JavaScript Error:', error);
-                }
-            <\/script>
-        </body>
-        </html>
-    `;
-
-    const blob = new Blob([completeHTML], { type: 'text/html' });
-    pagePreviewFrame.src = URL.createObjectURL(blob);
-}
-
-// Make removeComponent available globally
-window.removeComponent = removeComponent;
-
-// Close page display
-closePageBtn.addEventListener('click', closePageDisplay);
-
-// UPDATE: Modify loadPage function to open page display
-function loadPage(pageId) {
-    openPageDisplay(pageId);
-}
-
-// UPDATE: Initialize pages array if empty
-if (pages.length === 0) {
-    // Don't auto-create a page
-}
-
-// Page Preview Action Buttons
-const copyPageCodeBtn = document.getElementById('copyPageCodeBtn');
-const exportPageBtn = document.getElementById('exportPageBtn');
-const resetPageBtn = document.getElementById('resetPageBtn');
-
-// Copy Page Code
-copyPageCodeBtn.addEventListener('click', () => {
-    const mergedCode = currentPageComponents.reduce((acc, convId) => {
-        const conv = conversations.find(c => c.id === convId);
-        if (conv && conv.code) {
-            acc.html += `
-    <!-- Component: ${conv.title} -->
-    <div class="component-section" data-component-id="${convId}">
-        <div class="component-header">
-            <h3>${conv.title}</h3>
-        </div>
-        <div class="component-content">
-            ${conv.code.html || ''}
-        </div>
-    </div>
-`;
-            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
-            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
-        }
-        return acc;
-    }, { html: '', css: '', js: '' });
-
-    const baseStyles = `
-        /* Base Page Layout Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .component-section {
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 20px;
-        }
-        
-        .component-section:last-child {
-            border-bottom: none;
-        }
-        
-        .component-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .component-header h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .component-content {
-            flex: 1;
-        }
-    `;
-
-    const fullPageCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Page</title>
-    <style>
-${baseStyles}
-${mergedCode.css}
-    </style>
-</head>
-<body>
-${mergedCode.html}
-    <script>
-        try {
-${mergedCode.js}
-        } catch (error) {
-            console.error('JavaScript Error:', error);
-        }
-    <\/script>
-</body>
-</html>`;
-
-    navigator.clipboard.writeText(fullPageCode).then(() => {
-        const originalText = copyPageCodeBtn.innerHTML;
-        copyPageCodeBtn.innerHTML = '✅ Copied!';
-        setTimeout(() => {
-            copyPageCodeBtn.innerHTML = originalText;
-        }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy to clipboard');
-    });
-});
-
-// Export Page as File
-exportPageBtn.addEventListener('click', () => {
-    const mergedCode = currentPageComponents.reduce((acc, convId) => {
-        const conv = conversations.find(c => c.id === convId);
-        if (conv && conv.code) {
-            acc.html += `
-    <!-- Component: ${conv.title} -->
-    <div class="component-section" data-component-id="${convId}">
-        <div class="component-header">
-            <h3>${conv.title}</h3>
-        </div>
-        <div class="component-content">
-            ${conv.code.html || ''}
-        </div>
-    </div>
-`;
-            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
-            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
-        }
-        return acc;
-    }, { html: '', css: '', js: '' });
-
-    const baseStyles = `
-        /* Base Page Layout Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .component-section {
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 20px;
-        }
-        
-        .component-section:last-child {
-            border-bottom: none;
-        }
-        
-        .component-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .component-header h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .component-content {
-            flex: 1;
-        }
-    `;
-
-    const fullPageCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Page</title>
-    <style>
-${baseStyles}
-${mergedCode.css}
-    </style>
-</head>
-<body>
-${mergedCode.html}
-    <script>
-        try {
-${mergedCode.js}
-        } catch (error) {
-            console.error('JavaScript Error:', error);
-        }
-    <\/script>
-</body>
-</html>`;
-
-    // Create blob and download
-    const blob = new Blob([fullPageCode], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    
-    // Get page title or use default
-    const page = pages.find(p => p.id === currentPageId);
-    const fileName = page ? `${page.title.replace(/\s+/g, '_')}.html` : 'my_page.html';
-    a.download = fileName;
-    
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    // Show feedback
-    const originalText = exportPageBtn.innerHTML;
-    exportPageBtn.innerHTML = '✅ Exported!';
-    setTimeout(() => {
-        exportPageBtn.innerHTML = originalText;
-    }, 2000);
-});
-
-// Reset Page Components
-resetPageBtn.addEventListener('click', () => {
-    if (currentPageComponents.length === 0) {
-        alert('No components to reset.');
-        return;
-    }
-
-    if (confirm('Are you sure you want to remove all components from this page?')) {
-        currentPageComponents = [];
-        
-        // Save to page
-        if (currentPageId) {
-            const page = pages.find(p => p.id === currentPageId);
-            if (page) {
-                page.conversationIds = [];
-                savePages();
-            }
-        }
-
-        loadAvailableComponents();
-        updateSelectedComponentsUI();
-        updatePagePreview();
-    }
-});
-
-// Helper function to generate merged code (DRY principle)
-function generateMergedPageCode() {
-    const mergedCode = currentPageComponents.reduce((acc, component) => {
-        const conv = conversations.find(c => c.id === component.convId);
-        if (conv && conv.code) {
-            acc.html += `
-    <!-- Component: ${conv.title} -->
-    <div class="component-section" data-component-id="${component.convId}" data-instance-id="${component.instanceId}">
-        <div class="component-header">
-            <h3>${conv.title}</h3>
-        </div>
-        <div class="component-content">
-            ${conv.code.html || ''}
-        </div>
-    </div>
-`;
-            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
-            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
-        }
-        return acc;
-    }, { html: '', css: '', js: '' });
-
-    const baseStyles = `
-        /* Base Page Layout Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .component-section {
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 20px;
-        }
-        
-        .component-section:last-child {
-            border-bottom: none;
-        }
-        
-        .component-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .component-header h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .component-content {
-            flex: 1;
-        }
-    `;
-
-    return { mergedCode, baseStyles };
-}
-
-// Copy Page Code
-copyPageCodeBtn.addEventListener('click', () => {
-    const { mergedCode, baseStyles } = generateMergedPageCode();
-
-    const fullPageCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Page</title>
-    <style>
-${baseStyles}
-${mergedCode.css}
-    </style>
-</head>
-<body>
-${mergedCode.html}
-    <script>
-        try {
-${mergedCode.js}
-        } catch (error) {
-            console.error('JavaScript Error:', error);
-        }
-    <\/script>
-</body>
-</html>`;
-
-    navigator.clipboard.writeText(fullPageCode).then(() => {
-        const originalText = copyPageCodeBtn.innerHTML;
-        copyPageCodeBtn.innerHTML = '✅ Copied!';
-        setTimeout(() => {
-            copyPageCodeBtn.innerHTML = originalText;
-        }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy to clipboard');
-    });
-});
-
-// Export Page as File
-exportPageBtn.addEventListener('click', () => {
-    const { mergedCode, baseStyles } = generateMergedPageCode();
-
-    const fullPageCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Page</title>
-    <style>
-${baseStyles}
-${mergedCode.css}
-    </style>
-</head>
-<body>
-${mergedCode.html}
-    <script>
-        try {
-${mergedCode.js}
-        } catch (error) {
-            console.error('JavaScript Error:', error);
-        }
-    <\/script>
-</body>
-</html>`;
-
-    // Create blob and download
-    const blob = new Blob([fullPageCode], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    
-    // Get page title or use default
-    const page = pages.find(p => p.id === currentPageId);
-    const fileName = page ? `${page.title.replace(/\s+/g, '_')}.html` : 'my_page.html';
-    a.download = fileName;
-    
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    // Show feedback
-    const originalText = exportPageBtn.innerHTML;
-    exportPageBtn.innerHTML = '✅ Exported!';
-    setTimeout(() => {
-        exportPageBtn.innerHTML = originalText;
-    }, 2000);
 });
 
 // ========== SHAPE SELECTION FOR AI EDITING (IMPROVED) ==========
@@ -2407,14 +1410,8 @@ sendEditBtn.addEventListener('click', async () => {
     showLoading();
     
     try {
-        // Save current code state before AI update
-        if (!isViewingPrevious) {
-            previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
-            currentCodeState = { ...previousCodeState };
-        } else {
-            toggleVersion(false);
-            previousCodeState = { html: htmlCode.value, css: cssCode.value, js: jsCode.value };
-        }
+        // Save to history before AI update
+        saveToHistory();
         
         // Send enhanced message with all selection context to AI
         const data = await getAIResponse(enhancedMessage);
@@ -2424,16 +1421,16 @@ sendEditBtn.addEventListener('click', async () => {
         // Update editors
         if (data.html) {
             htmlCode.value = data.html;
-            currentCodeState.html = data.html;
         }
         if (data.css) {
             cssCode.value = data.css;
-            currentCodeState.css = data.css;
         }
         if (data.javascript) {
             jsCode.value = data.javascript;
-            currentCodeState.js = data.javascript;
         }
+        
+        // Save to history after AI update
+        saveToHistory();
         
         updatePreview();
         
@@ -2458,12 +1455,10 @@ sendEditBtn.addEventListener('click', async () => {
         
     } catch (error) {
         removeLoading();
-        addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
-        console.error('Error:', error);
+        addMessage('assistant', 'Sorry, I encountered an error communicating with the server. Please check the console for details.');
+        console.error('Error in sendEditBtn:', error);
     }
 });
-
-
 
 // ========== FILE/IMAGE ATTACHMENT ==========
 const attachFileBtn = document.getElementById('attachFileBtn');
@@ -2472,34 +1467,27 @@ const attachmentSection = document.getElementById('attachmentSection');
 const attachmentPreview = document.getElementById('attachmentPreview');
 const removeAttachmentBtn = document.getElementById('removeAttachmentBtn');
 
-let currentAttachment = null; // {file, type, dataUrl, name, size}
-
-// Open file picker
 attachFileBtn.addEventListener('click', () => {
     fileInput.click();
 });
 
-// Handle file selection
 fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
         alert('Please select an image file');
         fileInput.value = '';
         return;
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
         alert('File size must be less than 10MB');
         fileInput.value = '';
         return;
     }
 
-    // Convert to base64
     try {
         const dataUrl = await fileToBase64(file);
         
@@ -2517,11 +1505,9 @@ fileInput.addEventListener('change', async (e) => {
         alert('Error reading file. Please try again.');
     }
 
-    // Reset file input
     fileInput.value = '';
 });
 
-// Convert file to base64
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -2531,7 +1517,6 @@ function fileToBase64(file) {
     });
 }
 
-// Format file size
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -2540,7 +1525,6 @@ function formatFileSize(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-// Show attachment preview
 function showAttachmentPreview() {
     attachmentPreview.innerHTML = `
         <img src="${currentAttachment.dataUrl}" alt="Preview">
@@ -2552,45 +1536,1098 @@ function showAttachmentPreview() {
     attachmentSection.style.display = 'flex';
 }
 
-// Remove attachment
 removeAttachmentBtn.addEventListener('click', () => {
     currentAttachment = null;
     attachmentSection.style.display = 'none';
     attachmentPreview.innerHTML = '';
 });
 
-// Update addMessage to show attachment indicator
-function addMessage(role, content, attachment = null) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${role}`;
+// ========== PAGE MANAGEMENT ==========
+function initializePage() {
+    const pageId = Date.now().toString();
+    currentPageId = pageId;
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
+    const page = {
+        id: pageId,
+        title: 'New Page',
+        date: new Date().toISOString(),
+        conversationIds: [],
+    };
 
-    if (role === 'assistant') {
-        const header = document.createElement('div');
-        header.className = 'message-header';
-        header.textContent = 'AI Assistant';
-        contentDiv.appendChild(header);
-    }
-
-    const textNode = document.createTextNode(content);
-    contentDiv.appendChild(textNode);
-
-    // Add attachment indicator if present
-    if (attachment && role === 'user') {
-        const attachmentDiv = document.createElement('div');
-        attachmentDiv.className = 'attachment-indicator';
-        attachmentDiv.innerHTML = `
-            <img src="${attachment.dataUrl}" alt="Attachment">
-            <span>📎 ${attachment.name}</span>
-        `;
-        contentDiv.appendChild(attachmentDiv);
-    }
-
-    messageDiv.appendChild(contentDiv);
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    return messageDiv;
+    pages.unshift(page);
+    savePages();
+    return page;
 }
+
+function savePages() {
+    localStorage.setItem('webdev_pages', JSON.stringify(pages));
+}
+
+function loadPagesData() {
+    const saved = localStorage.getItem('webdev_pages');
+    if (saved) {
+        pages = JSON.parse(saved);
+    }
+}
+
+function updatePageList() {
+    pageList.innerHTML = '';
+
+    pages.forEach(page => {
+        const item = document.createElement('div');
+        item.className = 'page-item';
+        if (page.id === currentPageId) {
+            item.classList.add('active');
+        }
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'page-info';
+
+        const title = document.createElement('div');
+        title.className = 'page-title';
+        title.textContent = page.title;
+
+        const date = document.createElement('div');
+        date.className = 'page-date';
+        date.textContent = formatDate(page.date);
+
+        infoDiv.appendChild(title);
+        infoDiv.appendChild(date);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'conversation-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'action-btn rename-btn';
+        renameBtn.innerHTML = '✏️';
+        renameBtn.title = 'Rename';
+        renameBtn.onclick = (e) => {
+            e.stopPropagation();
+            const newTitle = prompt('Enter new title:', page.title);
+            if (newTitle) renamePage(page.id, newTitle);
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'action-btn delete-btn';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Delete';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deletePage(page.id);
+        };
+
+        actionsDiv.appendChild(renameBtn);
+        actionsDiv.appendChild(deleteBtn);
+
+        item.appendChild(infoDiv);
+        item.appendChild(actionsDiv);
+
+        item.addEventListener('click', () => loadPage(page.id));
+
+        pageList.appendChild(item);
+    });
+}
+
+function renamePage(pageId, newTitle) {
+    if (!pageId || !newTitle?.trim()) return false;
+
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return false;
+
+    page.title = newTitle.trim();
+    savePages();
+    updatePageList();
+    return true;
+}
+
+function deletePage(pageId) {
+    const index = pages.findIndex(p => p.id === pageId);
+    if (index === -1) return false;
+
+    pages.splice(index, 1);
+
+    if (currentPageId === pageId) {
+        currentPageId = pages[0]?.id || null;
+        if (currentPageId) {
+            loadPage(currentPageId);
+        }
+    }
+
+    savePages();
+    updatePageList();
+    return true;
+}
+
+newPageBtn.addEventListener('click', () => {
+    initializePage();
+    updatePageList();
+});
+
+// ========== CONVERSATION MANAGEMENT ==========
+function initializeConversation() {
+    const conversationId = Date.now().toString();
+    currentConversationId = conversationId;
+
+    const conversation = {
+        id: conversationId,
+        title: 'New Conversation',
+        date: new Date().toISOString(),
+        messages: [],
+        model: currentModel,
+        code: {
+            html: `<div class="container">
+    <h1>Welcome to Web Dev Playground</h1>
+    <p>Start coding and see live results!</p>
+</div>`,
+            css: cssCode.value,
+            js: jsCode.value
+        }
+    };
+
+    conversations.unshift(conversation);
+    saveConversations();
+    
+    // Initialize history with starting state
+    codeHistory = [conversation.code];
+    historyIndex = 0;
+    updateHistoryButtons();
+    
+    return conversation;
+}
+
+function loadConversation(conversationId) {
+    if (currentConversationId) {
+        const currentConv = conversations.find(c => c.id === currentConversationId);
+        if (currentConv) {
+            currentConv.code = {
+                html: htmlCode.value,
+                css: cssCode.value,
+                js: jsCode.value
+            };
+            saveConversations();
+        }
+    }
+
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation) return;
+
+    currentConversationId = conversationId;
+
+    chatMessages.innerHTML = '';
+
+    if (conversation.code) {
+        htmlCode.value = conversation.code.html || '';
+        cssCode.value = conversation.code.css || '';
+        jsCode.value = conversation.code.js || '';
+    } else {
+        conversation.code = {
+            html: htmlCode.value,
+            css: cssCode.value,
+            js: jsCode.value
+        };
+    }
+
+    // Reset history for this conversation
+    codeHistory = [conversation.code];
+    historyIndex = 0;
+    updateHistoryButtons();
+
+    updatePreview();
+
+    addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
+
+    conversation.messages.forEach(msg => {
+        addMessage(msg.role, msg.content);
+    });
+
+    updateConversationList();
+}
+
+function renameConversation(conversationId, newTitle) {
+    if (!conversationId || !newTitle?.trim()) return false;
+
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation) return false;
+
+    conversation.title = newTitle.trim();
+    saveConversations();
+    updateConversationList();
+    return true;
+}
+
+function deleteConversation(conversationId) {
+    const index = conversations.findIndex(c => c.id === conversationId);
+    if (index === -1) return false;
+
+    conversations.splice(index, 1);
+
+    if (currentConversationId === conversationId) {
+        currentConversationId = null;
+        
+        if (conversations.length > 0) {
+            loadConversation(conversations[0].id);
+        } else {
+            currentConversationId = null;
+            htmlCode.value = '';
+            cssCode.value = '';
+            jsCode.value = '';
+            codeHistory = [];
+            historyIndex = -1;
+            updateHistoryButtons();
+            updatePreview();
+            chatMessages.innerHTML = '';
+            addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
+        }
+    }
+
+    saveConversations();
+    updateConversationList();
+    return true;
+}
+
+function saveMessageToConversation(userMessage, aiResponse) {
+    if (!currentConversationId) {
+        initializeConversation();
+    }
+
+    const conversation = conversations.find(c => c.id === currentConversationId);
+    if (conversation) {
+        conversation.messages.push({
+            role: 'user',
+            content: userMessage,
+            timestamp: new Date().toISOString()
+        });
+        conversation.messages.push({
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date().toISOString()
+        });
+
+        if (conversation.messages.length === 2) {
+            conversation.title = userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : '');
+        }
+
+        saveConversations();
+        updateConversationList();
+    }
+}
+
+function saveConversations() {
+    localStorage.setItem('webdev_conversations', JSON.stringify(conversations));
+}
+
+function loadConversationsData() {
+    const saved = localStorage.getItem('webdev_conversations');
+    if (saved) {
+        conversations = JSON.parse(saved);
+    }
+}
+
+function updateConversationList() {
+    conversationList.innerHTML = '';
+
+    conversations.forEach(conv => {
+        const item = document.createElement('div');
+        item.className = 'conversation-item';
+        if (conv.id === currentConversationId) {
+            item.classList.add('active');
+        }
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'conversation-info';
+
+        const title = document.createElement('div');
+        title.className = 'conversation-title';
+        title.textContent = conv.title;
+
+        const date = document.createElement('div');
+        date.className = 'conversation-date';
+        date.textContent = formatDate(conv.date);
+
+        infoDiv.appendChild(title);
+        infoDiv.appendChild(date);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'conversation-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'action-btn rename-btn';
+        renameBtn.innerHTML = '✏️';
+        renameBtn.title = 'Rename';
+        renameBtn.onclick = (e) => {
+            e.stopPropagation();
+            const newTitle = prompt('Enter new title:', conv.title);
+            if (newTitle) renameConversation(conv.id, newTitle);
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'action-btn delete-btn';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Delete';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteConversation(conv.id);
+        };
+
+        actionsDiv.appendChild(renameBtn);
+        actionsDiv.appendChild(deleteBtn);
+
+        item.appendChild(infoDiv);
+        item.appendChild(actionsDiv);
+
+        item.addEventListener('click', () => {
+            closePageDisplay();
+            loadConversation(conv.id);
+        });
+
+        conversationList.appendChild(item);
+    });
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+}
+
+newConversationBtn.addEventListener('click', () => {
+    const newConv = initializeConversation();
+    
+    htmlCode.value = newConv.code.html;
+    cssCode.value = newConv.code.css;
+    jsCode.value = newConv.code.js;
+    
+    updatePreview();
+    
+    chatMessages.innerHTML = '';
+    addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
+    updateConversationList();
+});
+
+resetBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to reset the current conversation?')) {
+        chatMessages.innerHTML = '';
+        addMessage('assistant', 'Welcome! I\'m your coding assistant. Ask me anything about web development.');
+
+        if (currentConversationId) {
+            const conversation = conversations.find(c => c.id === currentConversationId);
+            if (conversation) {
+                conversation.messages = [];
+                saveConversations();
+            }
+        }
+    }
+});
+
+// ========== MODEL SELECTION ==========
+modelItems.forEach(item => {
+    item.addEventListener('click', () => {
+        modelItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        currentModel = item.dataset.model;
+
+        const modelName = item.querySelector('.model-name').textContent;
+        addMessage('assistant', `Switched to ${modelName} model.`);
+    });
+});
+
+// ========== PAGE DISPLAY MANAGEMENT ==========
+const pageDisplayContent = document.getElementById('pageDisplayContent');
+const componentList = document.getElementById('componentList');
+const selectedComponents = document.getElementById('selectedComponents');
+const pagePreviewFrame = document.getElementById('pagePreviewFrame');
+const closePageBtn = document.getElementById('closePageBtn');
+
+let currentPageComponents = [];
+
+function openPageDisplay(pageId) {
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return;
+
+    currentPageId = pageId;
+    
+    if (page.conversationIds) {
+        if (page.conversationIds.length > 0 && typeof page.conversationIds[0] === 'string') {
+            currentPageComponents = page.conversationIds.map(convId => ({
+                convId: convId,
+                instanceId: Date.now() + Math.random()
+            }));
+        } else {
+            currentPageComponents = page.conversationIds || [];
+        }
+    } else {
+        currentPageComponents = [];
+    }
+
+    document.querySelector('.preview-panel').style.display = 'none';
+    document.querySelector('.editor-panel').style.display = 'none';
+    document.querySelector('.chat-panel').style.display = 'none';
+    document.querySelector('.resizer-right').style.display = 'none';
+    document.querySelector('.resizer-bottom').style.display = 'none';
+
+    pageDisplayContent.style.display = 'grid';
+    closePageBtn.style.display = 'flex';
+
+    loadAvailableComponents();
+    updateSelectedComponentsUI();
+    updatePagePreview();
+}
+
+function closePageDisplay() {
+    if (currentPageId) {
+        const page = pages.find(p => p.id === currentPageId);
+        if (page) {
+            page.conversationIds = currentPageComponents;
+            savePages();
+        }
+    }
+
+    document.querySelector('.preview-panel').style.display = 'flex';
+    document.querySelector('.editor-panel').style.display = 'flex';
+    document.querySelector('.chat-panel').style.display = 'flex';
+    document.querySelector('.resizer-right').style.display = 'block';
+    document.querySelector('.resizer-bottom').style.display = 'block';
+
+    pageDisplayContent.style.display = 'none';
+    closePageBtn.style.display = 'none';
+
+    currentPageId = null;
+    currentPageComponents = [];
+}
+
+function loadAvailableComponents() {
+    componentList.innerHTML = '';
+
+    if (conversations.length === 0) {
+        componentList.innerHTML = '<p style="color: #666; font-size: 12px;">No components available. Create conversations first.</p>';
+        return;
+    }
+
+    conversations.forEach(conv => {
+        const card = document.createElement('div');
+        card.className = 'component-card';
+        
+        const usageCount = currentPageComponents.filter(c => c.convId === conv.id).length;
+        
+        card.innerHTML = `
+            <div class="component-card-header">
+                <h4>${conv.title} ${usageCount > 0 ? `(${usageCount})` : ''}</h4>
+                <button class="add-component-btn" data-conv-id="${conv.id}">
+                    + Add
+                </button>
+            </div>
+            <p>${conv.messages.length} messages • ${formatDate(conv.date)}</p>
+        `;
+
+        const addBtn = card.querySelector('.add-component-btn');
+        addBtn.addEventListener('click', () => addComponent(conv.id));
+
+        componentList.appendChild(card);
+    });
+}
+
+function addComponent(conversationId) {
+    const newInstance = {
+        convId: conversationId,
+        instanceId: Date.now() + Math.random()
+    };
+    
+    currentPageComponents.push(newInstance);
+    loadAvailableComponents();
+    updateSelectedComponentsUI();
+    updatePagePreview();
+}
+
+function removeComponent(instanceId) {
+    const index = currentPageComponents.findIndex(c => c.instanceId === instanceId);
+    if (index > -1) {
+        currentPageComponents.splice(index, 1);
+    }
+    
+    loadAvailableComponents();
+    updateSelectedComponentsUI();
+    updatePagePreview();
+}
+
+let draggedElement = null;
+let draggedIndex = null;
+
+function updateSelectedComponentsUI() {
+    selectedComponents.innerHTML = '';
+
+    if (currentPageComponents.length === 0) {
+        selectedComponents.innerHTML = '<p style="color: #666; margin: 0; font-size: 12px;">No components added yet</p>';
+        return;
+    }
+
+    currentPageComponents.forEach((component, index) => {
+        const conv = conversations.find(c => c.id === component.convId);
+        if (!conv) return;
+
+        const tag = document.createElement('div');
+        tag.className = 'selected-tag';
+        tag.draggable = true;
+        tag.dataset.instanceId = component.instanceId;
+        tag.dataset.index = index;
+        
+        tag.innerHTML = `
+            ${conv.title}
+            <button onclick="removeComponent(${component.instanceId})" title="Remove component">×</button>
+        `;
+
+        tag.addEventListener('dragstart', handleDragStart);
+        tag.addEventListener('dragend', handleDragEnd);
+        tag.addEventListener('dragover', handleDragOver);
+        tag.addEventListener('drop', handleDrop);
+        tag.addEventListener('dragenter', handleDragEnter);
+        tag.addEventListener('dragleave', handleDragLeave);
+
+        selectedComponents.appendChild(tag);
+    });
+}
+
+function handleDragStart(e) {
+    draggedElement = e.target;
+    draggedIndex = parseInt(e.target.dataset.index);
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.innerHTML);
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+    
+    document.querySelectorAll('.selected-tag').forEach(tag => {
+        tag.classList.remove('drag-over');
+    });
+    
+    draggedElement = null;
+    draggedIndex = null;
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    if (e.target.classList.contains('selected-tag') && e.target !== draggedElement) {
+        e.target.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    if (e.target.classList.contains('selected-tag')) {
+        e.target.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    e.target.classList.remove('drag-over');
+    
+    if (draggedElement !== e.target && e.target.classList.contains('selected-tag')) {
+        const dropIndex = parseInt(e.target.dataset.index);
+        
+        const draggedItem = currentPageComponents[draggedIndex];
+        currentPageComponents.splice(draggedIndex, 1);
+        currentPageComponents.splice(dropIndex, 0, draggedItem);
+        
+        updateSelectedComponentsUI();
+        updatePagePreview();
+    }
+    
+    return false;
+}
+
+function updatePagePreview() {
+    const mergedCode = currentPageComponents.reduce((acc, component) => {
+        const conv = conversations.find(c => c.id === component.convId);
+        if (conv && conv.code) {
+            acc.html += `
+    <!-- Component: ${conv.title} (Instance: ${component.instanceId}) -->
+    <div class="component-section" data-component-id="${component.convId}" data-instance-id="${component.instanceId}">
+        <div class="component-header">
+            <h3>${conv.title}</h3>
+        </div>
+        <div class="component-content">
+            ${conv.code.html || ''}
+        </div>
+    </div>
+`;
+            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
+            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
+        }
+        return acc;
+    }, { html: '', css: '', js: '' });
+
+    const baseStyles = `
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-section {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px;
+        }
+        
+        .component-section:last-child {
+            border-bottom: none;
+        }
+        
+        .component-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .component-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .component-content {
+            flex: 1;
+        }
+    `;
+
+    const completeHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                ${baseStyles}
+                ${mergedCode.css}
+            </style>
+        </head>
+        <body>
+            ${mergedCode.html}
+            <script>
+                try {
+                    ${mergedCode.js}
+                } catch (error) {
+                    console.error('JavaScript Error:', error);
+                }
+            <\/script>
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob([completeHTML], { type: 'text/html' });
+    pagePreviewFrame.src = URL.createObjectURL(blob);
+}
+
+window.removeComponent = removeComponent;
+
+closePageBtn.addEventListener('click', closePageDisplay);
+
+function loadPage(pageId) {
+    openPageDisplay(pageId);
+}
+
+// Page Preview Action Buttons
+const viewCodeBtn = document.getElementById('viewCodeBtn');
+const codeViewWrapper = document.getElementById('codeViewWrapper');
+const pagePreviewWrapper = document.querySelector('.page-preview-wrapper');
+const fullPageCodeElement = document.getElementById('fullPageCode');
+const copyCodeFromViewBtn = document.getElementById('copyCodeFromViewBtn');
+
+let isViewingCode = false;
+
+viewCodeBtn.addEventListener('click', () => {
+    isViewingCode = !isViewingCode;
+    
+    if (isViewingCode) {
+        pagePreviewWrapper.style.display = 'none';
+        codeViewWrapper.style.display = 'flex';
+        viewCodeBtn.innerHTML = '👁️ View Preview';
+        
+        const { mergedCode, baseStyles } = generateMergedPageCode(false);
+        const fullPageCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+${baseStyles}
+${mergedCode.css}
+    </style>
+</head>
+<body>
+${mergedCode.html}
+    <script>
+        try {
+${mergedCode.js}
+        } catch (error) {
+            console.error('JavaScript Error:', error);
+        }
+    <\/script>
+</body>
+</html>`;
+        
+        fullPageCodeElement.textContent = fullPageCode;
+    } else {
+        pagePreviewWrapper.style.display = 'block';
+        codeViewWrapper.style.display = 'none';
+        viewCodeBtn.innerHTML = '👁️ View Code';
+    }
+});
+
+copyCodeFromViewBtn.addEventListener('click', () => {
+    const code = fullPageCodeElement.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        const originalText = copyCodeFromViewBtn.innerHTML;
+        copyCodeFromViewBtn.innerHTML = '✅ Copied!';
+        setTimeout(() => {
+            copyCodeFromViewBtn.innerHTML = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    });
+});
+
+const viewFullscreenBtn = document.getElementById('viewFullscreenBtn');
+const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+const fullscreenFrame = document.getElementById('fullscreenFrame');
+const closeFullscreenBtn = document.getElementById('closeFullscreenBtn');
+
+viewFullscreenBtn.addEventListener('click', () => {
+    const { mergedCode, baseStyles } = generateMergedPageCode(false);
+    const completeHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                ${baseStyles}
+                ${mergedCode.css}
+            </style>
+        </head>
+        <body>
+            ${mergedCode.html}
+            <script>
+                try {
+                    ${mergedCode.js}
+                } catch (error) {
+                    console.error('JavaScript Error:', error);
+                }
+            <\/script>
+        </body>
+        </html>
+    `;
+    
+    const blob = new Blob([completeHTML], { type: 'text/html' });
+    fullscreenFrame.src = URL.createObjectURL(blob);
+    fullscreenOverlay.classList.add('active');
+});
+
+closeFullscreenBtn.addEventListener('click', () => {
+    fullscreenOverlay.classList.remove('active');
+    fullscreenFrame.src = '';
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && fullscreenOverlay.classList.contains('active')) {
+        closeFullscreenBtn.click();
+    }
+});
+
+const exportPageBtn = document.getElementById('exportPageBtn');
+
+exportPageBtn.addEventListener('click', () => {
+    const { mergedCode, baseStyles } = generateMergedPageCode(false);
+
+    const fullPageCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <style>
+${baseStyles}
+${mergedCode.css}
+    </style>
+</head>
+<body>
+${mergedCode.html}
+    <script>
+        try {
+${mergedCode.js}
+        } catch (error) {
+            console.error('JavaScript Error:', error);
+        }
+    <\/script>
+</body>
+</html>`;
+
+    const blob = new Blob([fullPageCode], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    const page = pages.find(p => p.id === currentPageId);
+    const fileName = page ? `${page.title.replace(/\s+/g, '_')}.html` : 'my_page.html';
+    a.download = fileName;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const originalText = exportPageBtn.innerHTML;
+    exportPageBtn.innerHTML = '✅ Exported!';
+    setTimeout(() => {
+        exportPageBtn.innerHTML = originalText;
+    }, 2000);
+});
+
+const resetPageBtn = document.getElementById('resetPageBtn');
+
+resetPageBtn.addEventListener('click', () => {
+    if (currentPageComponents.length === 0) {
+        alert('No components to reset.');
+        return;
+    }
+
+    if (confirm('Are you sure you want to remove all components from this page?')) {
+        currentPageComponents = [];
+        
+        if (currentPageId) {
+            const page = pages.find(p => p.id === currentPageId);
+            if (page) {
+                page.conversationIds = [];
+                savePages();
+            }
+        }
+
+        loadAvailableComponents();
+        updateSelectedComponentsUI();
+        updatePagePreview();
+    }
+});
+
+function generateMergedPageCode(includeHeaders = true) {
+    const mergedCode = currentPageComponents.reduce((acc, component) => {
+        const conv = conversations.find(c => c.id === component.convId);
+        if (conv && conv.code) {
+            if (includeHeaders) {
+                acc.html += `
+    <!-- Component: ${conv.title} -->
+    <div class="component-section" data-component-id="${component.convId}" data-instance-id="${component.instanceId}">
+        <div class="component-header">
+            <h3>${conv.title}</h3>
+        </div>
+        <div class="component-content">
+            ${conv.code.html || ''}
+        </div>
+    </div>
+`;
+            } else {
+                acc.html += `
+    <!-- Component: ${conv.title} -->
+    ${conv.code.html || ''}
+
+`;
+            }
+            acc.css += `\n/* Component: ${conv.title} */\n${conv.code.css || ''}\n`;
+            acc.js += `\n// Component: ${conv.title}\n${conv.code.js || ''}\n`;
+        }
+        return acc;
+    }, { html: '', css: '', js: '' });
+
+    const baseStyles = includeHeaders ? `
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-section {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px;
+        }
+        
+        .component-section:last-child {
+            border-bottom: none;
+        }
+        
+        .component-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .component-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .component-content {
+            flex: 1;
+        }
+    ` : `
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    `;
+
+    return { mergedCode, baseStyles };
+}
+
+// ========== TEMPLATE FUNCTIONALITY ==========
+const templateBtn = document.getElementById('templateBtn');
+const templateModal = document.getElementById('templateModal');
+const closeTemplateBtn = document.getElementById('closeTemplateBtn');
+const templateGrid = document.getElementById('templateGrid');
+const templateCategories = document.getElementById('templateCategories');
+
+let currentCategory = 'all';
+
+templateBtn.addEventListener('click', () => {
+    loadTemplates(currentCategory);
+    templateModal.showModal();
+});
+
+closeTemplateBtn.addEventListener('click', () => {
+    templateModal.close();
+});
+
+templateCategories.addEventListener('click', (e) => {
+    if (e.target.classList.contains('category-btn')) {
+        document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        currentCategory = e.target.dataset.category;
+        loadTemplates(currentCategory);
+    }
+});
+
+function loadTemplates(category) {
+    templateGrid.innerHTML = '';
+    
+    const filtered = category === 'all' 
+        ? templateComponents 
+        : templateComponents.filter(t => t.category === category);
+    
+    filtered.forEach(template => {
+        const card = document.createElement('div');
+        card.className = 'template-card';
+        card.innerHTML = `
+            <span class="template-category-tag">${template.category}</span>
+            <h4>${template.title}</h4>
+            <p>Click to add this component to your page</p>
+        `;
+        
+        card.addEventListener('click', () => addTemplateToPage(template));
+        templateGrid.appendChild(card);
+    });
+}
+
+function addTemplateToPage(template) {
+    const conversationId = Date.now().toString();
+    
+    const conversation = {
+        id: conversationId,
+        title: template.title,
+        date: new Date().toISOString(),
+        messages: [],
+        model: currentModel,
+        code: {
+            html: template.code.html,
+            css: template.code.css,
+            js: template.code.js
+        }
+    };
+    
+    conversations.unshift(conversation);
+    saveConversations();
+    
+    if (currentPageId) {
+        const newInstance = {
+            convId: conversationId,
+            instanceId: Date.now() + Math.random()
+        };
+        currentPageComponents.push(newInstance);
+        
+        loadAvailableComponents();
+        updateSelectedComponentsUI();
+        updatePagePreview();
+    }
+    
+    templateModal.close();
+    
+    alert(`✅ "${template.title}" added successfully!`);
+}
+
+// ========== KEYBOARD SHORTCUTS ==========
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        updatePreview();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        messageInput.focus();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebarBtn.click();
+    }
+    
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+    }
+    
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+    }
+});
+
+// ========== INITIALIZATION ==========
+loadConversationsData();
+loadPagesData();
+
+if (conversations.length > 0) {
+    updateConversationList();
+    updatePageList();
+} else {
+    initializeConversation();
+    updateConversationList();
+}
+
+console.log('🚀 Web Dev Playground initialized!');
+console.log('💡 Shortcuts: Ctrl+Enter (update) | Ctrl+K (chat) | Ctrl+B (sidebar) | Ctrl+Z (undo) | Ctrl+Shift+Z (redo)');

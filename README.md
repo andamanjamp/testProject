@@ -46,3 +46,8 @@ A powerful, AI-assisted web development playground that allows you to generate a
 *   **Chat with AI**: Type your request in the bottom panel (e.g., "Create a login form") and hit Send.
 *   **Manual Edit**: accessible the code directly in the HTML, CSS, and JS tabs on the right.
 *   **Preview**: The center panel shows the live output of your code.
+
+
+
+to-do
+1) add template to the page, not the conversation list

@@ -177,7 +177,7 @@ body {
 .new-page-btn {
     margin: 12px;
     padding: 10px 12px;
-    background: linear-gradient(135deg, #fffa6b, #eebd5a);
+    background: linear-gradient(135deg, #3446ec, #2e3de4);
     color: white;
     border: none;
     border-radius: 6px;
@@ -231,6 +231,8 @@ body {
     border-right: 1px solid rgba(255, 107, 107, 0.3);
     box-shadow: inset 0 0 10px rgba(255, 107, 107, 0.05);
 }
+
+
 
 .page-info {
     flex: 1;
@@ -344,6 +346,25 @@ body {
     font-size: 13px;
     margin: 0;
     flex: 1;
+}
+
+.template-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 20px;
+}
+
+.template-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .add-component-btn {
@@ -541,6 +562,95 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.code-view-wrapper {
+    flex: 1;
+    overflow: hidden;
+    padding: 20px;
+    background: #0f0f0f;
+    display: flex;
+    flex-direction: column;
+}
+
+.code-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.code-view-header h3 {
+    color: #fff;
+    font-size: 16px;
+    margin: 0;
+}
+
+.code-view-content {
+    flex: 1;
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: auto;
+    padding: 20px;
+}
+
+.code-view-content pre {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.code-view-content code {
+    color: #61dafb;
+}
+
+.fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 9999;
+    display: none;
+}
+
+.fullscreen-overlay.active {
+    display: block;
+}
+
+.fullscreen-header {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+}
+
+.close-fullscreen-btn {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.close-fullscreen-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.05);
+}
+
+.fullscreen-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
 
 /* New Conversation Button */
 .new-conversation-btn {
@@ -634,7 +744,7 @@ body {
     opacity: 1;
 }
 
-.conversation-title {
+.conversation-title, .page-title {
     font-size: 12px;
     color: #e0e0e0;
     margin-bottom: 4px;
@@ -644,7 +754,7 @@ body {
     text-overflow: ellipsis;
 }
 
-.conversation-date {
+.conversation-date, .page-date {
     font-size: 10px;
     color: #666;
 }
@@ -870,6 +980,73 @@ body {
 .modal-btn.primary:hover {
     opacity: 0.9;
     transform: translateY(-1px);
+}
+
+.template-categories {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.category-btn {
+    padding: 8px 16px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: #999;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.category-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.template-card {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.template-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+.template-category-tag {
+    display: inline-block;
+    background: rgba(102, 126, 234, 0.2);
+    color: #667eea;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin-bottom: 8px;
+}
+
+.template-card h4 {
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.template-card p {
+    color: #999;
+    font-size: 11px;
 }
 
 .panel-header h2 {

@@ -27,26 +27,6 @@
                     </svg>
                 </button>
             </div>
-            <!-- Page Buttons -->
-            <button class="new-page-btn" id="newPageBtn">
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                <span class="btn-text">New Page</span>
-            </button>
-
-            <!-- Page List -->
-            <div class="page-list" id="pageList">
-                <!-- Pages will be loaded dynamically -->
-            </div>
-
-            <!-- ADD THIS: Close Page Button (hidden by default) -->
-            <button class="close-page-btn" id="closePageBtn" style="display: none;">
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-                <span class="btn-text">Close Page View</span>
-            </button>
 
             <!-- Model Selection -->
             <div class="model-selection">
@@ -62,6 +42,19 @@
                     <div class="model-color model-blue"></div>
                     <span class="model-name">Claude</span>
                 </div>
+            </div>
+
+            <!-- Page Buttons -->
+            <button class="new-page-btn" id="newPageBtn">
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span class="btn-text">New Page</span>
+            </button>
+
+            <!-- Page List -->
+            <div class="page-list" id="pageList">
+                <!-- Pages will be loaded dynamically -->
             </div>
 
             <!-- New Conversation Button -->
@@ -86,10 +79,18 @@
             <div class="panel-header">
                 <h2>LIVE PREVIEW</h2>
 
-                <!-- Version Toggle -->
+                <!-- Undo/Redo Toggle -->
                 <div class="version-toggle">
-                    <button class="version-btn active" id="btnCurrent" title="Show current code">Current</button>
-                    <button class="version-btn" id="btnPrevious" title="Show previous code">Previous</button>
+                    <button class="version-btn" id="btnPrevious" title="Undo last change" disabled>
+                        <svg class="icon" style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                        </svg>
+                    </button>
+                    <button class="version-btn" id="btnCurrent" title="Redo change" disabled>
+                        <svg class="icon" style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/>
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- ADD THIS: Shape Selection Button -->
@@ -269,13 +270,25 @@ container.appendChild(button);
 
         <!-- Page Display (replaces main panels when active) -->
         <div class="page-display-content" id="pageDisplayContent" style="display: none;">
-            <div class="page-display-header">
-                <h1>Page Layout</h1>
-                <p class="page-subtitle">Select components to build your page</p>
+            <div class="page-display-header" style="display: flex; justify-content: space-between;">
+                <div>
+                    <h1>Page Layout</h1>
+                    <p class="page-subtitle">Select components to build your page</p>
+                </div>
+                <!-- ADD THIS: Close Page Button (hidden by default) -->
+                <button class="close-page-btn" id="closePageBtn" style="display: none;">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span class="btn-text">Close Page Layout</span>
+                </button>
             </div>
             
             <div class="available-components">
                 <h3>Available Components</h3>
+                <button class="template-btn" id="templateBtn">
+                    📦 Browse Templates
+                </button>
                 <div class="component-list" id="componentList">
                     <!-- Components from conversations will be loaded here -->
                 </div>
@@ -284,23 +297,37 @@ container.appendChild(button);
             <div class="page-preview-section">
                 <div class="preview-header-bar">
                     <h3>Page Preview</h3>
-                    <div class="preview-actions">
-                        <button class="preview-action-btn" id="copyPageCodeBtn" title="Copy full page code">
-                            📋 Copy Code
-                        </button>
-                        <button class="preview-action-btn" id="exportPageBtn" title="Export as HTML file">
-                            💾 Export File
-                        </button>
-                        <button class="preview-action-btn reset-action" id="resetPageBtn" title="Reset all components">
-                            🔄 Reset
-                        </button>
-                    </div>
+                        <div class="preview-actions">
+                            <button class="preview-action-btn" id="viewCodeBtn" title="View full code">
+                                👁️ View Code
+                            </button>
+                            <button class="preview-action-btn" id="viewFullscreenBtn" title="View fullscreen">
+                                ⛶ Fullscreen
+                            </button>
+                            <button class="preview-action-btn" id="exportPageBtn" title="Export as HTML file">
+                                💾 Export File
+                            </button>
+                            <button class="preview-action-btn reset-action" id="resetPageBtn" title="Reset all components">
+                                🔄 Reset
+                            </button>
+                        </div>
                 </div>
                 <div class="selected-components" id="selectedComponents">
                     <!-- Selected components will appear here -->
                 </div>
                 <div class="page-preview-wrapper">
                     <iframe id="pagePreviewFrame" class="page-preview-frame"></iframe>
+                </div>
+                <div class="code-view-wrapper" id="codeViewWrapper" style="display: none;">
+                    <div class="code-view-header">
+                        <h3>Full Page Code</h3>
+                        <button class="preview-action-btn" id="copyCodeFromViewBtn">
+                            📋 Copy Code
+                        </button>
+                    </div>
+                    <div class="code-view-content">
+                        <pre><code id="fullPageCode"></code></pre>
+                    </div>
                 </div>
             </div>
         </div>
@@ -358,6 +385,41 @@ Example: 'Make the text blue and increase font size'"></textarea>
         </div>
     </div>
 </dialog>
+
+<!-- Template Modal -->
+<dialog id="templateModal" class="modal">
+    <div class="modal-content">
+        <h3>Component Templates</h3>
+        <p>Choose from pre-built components to add to your page</p>
+        
+        <div class="template-categories" id="templateCategories">
+            <button class="category-btn active" data-category="all">All</button>
+            <button class="category-btn" data-category="Hero">Hero</button>
+            <button class="category-btn" data-category="Cards">Cards</button>
+            <button class="category-btn" data-category="Navigation">Navigation</button>
+            <button class="category-btn" data-category="Footer">Footer</button>
+        </div>
+        
+        <div class="template-grid" id="templateGrid">
+            <!-- Templates will be loaded here -->
+        </div>
+        
+        <div class="modal-actions">
+            <button id="closeTemplateBtn" class="modal-btn secondary">Close</button>
+        </div>
+    </div>
+</dialog>
+
+<!-- Fullscreen Overlay -->
+<div class="fullscreen-overlay" id="fullscreenOverlay">
+    <div class="fullscreen-header">
+        <button class="close-fullscreen-btn" id="closeFullscreenBtn">
+            <span>✕</span>
+            <span>Exit Fullscreen</span>
+        </button>
+    </div>
+    <iframe id="fullscreenFrame" class="fullscreen-frame"></iframe>
+</div>
 
     <script src="app.js"></script>
 </body>
